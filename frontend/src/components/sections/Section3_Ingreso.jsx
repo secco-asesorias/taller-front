@@ -1,0 +1,167 @@
+﻿import { useState } from 'react'
+import { useForm } from '../../context/FormContext'
+import { validarSeccion3 } from '../../utils/validation'
+import PhotoCapture from '../common/PhotoCapture'
+import FuelSelector from '../common/FuelSelector'
+
+const DOCS = [
+  { value: 'permiso',  label: 'Permiso de circulaciÃ³n' },
+  { value: 'soap',     label: 'SOAP' },
+  { value: 'revision', label: 'RevisiÃ³n tÃ©cnica' },
+  { value: 'ninguna',  label: 'Ninguna' },
+  { value: 'otros',    label: 'Otros' },
+]
+
+export default function Section3_Ingreso({ onNext, onBack }) {
+  const { formData, updateForm } = useForm()
+  const [errores, setErrores] = useState({})
+
+  function toggleDoc(val) {
+    const actual = formData.documentacion || []
+    if (val === 'ninguna') {
+      updateForm({ documentacion: actual.includes('ninguna') ? [] : ['ninguna'] })
+      return
+    }
+    let nuevo = actual.filter((v) => v !== 'ninguna')
+    updateForm({ documentacion: nuevo.includes(val) ? nuevo.filter((v) => v !== val) : [...nuevo, val] })
+  }
+
+  function handleFotoKm(result) {
+    updateForm(result
+      ? { foto_km: result.file, foto_km_preview: result.preview }
+      : { foto_km: null, foto_km_preview: null }
+    )
+  }
+
+  function handleFotoCombustible(result) {
+    updateForm(result
+      ? { foto_combustible: result.file, foto_combustible_preview: result.preview }
+      : { foto_combustible: null, foto_combustible_preview: null }
+    )
+  }
+
+  function handleSubmit() {
+    const e = validarSeccion3(formData)
+    setErrores(e)
+    if (Object.keys(e).length === 0) onNext()
+  }
+
+  return (
+    <div className="section-enter" style={{ padding: '0 16px 40px' }}>
+      <div style={{ marginBottom: 28 }}>
+        <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>
+          TÃ©cnico
+        </p>
+        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
+          Datos de Ingreso
+        </h2>
+        <div className="s-divider" />
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        {/* Fecha y hora */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label className="s-label">Fecha <span style={{ color: '#FF453A' }}>*</span></label>
+            <input type="date" value={formData.fecha_ingreso}
+              onChange={(e) => updateForm({ fecha_ingreso: e.target.value })}
+              className="s-input" />
+          </div>
+          <div>
+            <label className="s-label">Hora <span style={{ color: '#FF453A' }}>*</span></label>
+            <input type="time" value={formData.hora_ingreso}
+              onChange={(e) => updateForm({ hora_ingreso: e.target.value })}
+              className="s-input" />
+          </div>
+        </div>
+
+        {/* Kilometraje */}
+        <div className="s-card">
+          <label className="s-label">Kilometraje <span style={{ color: '#FF453A' }}>*</span></label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="number" inputMode="numeric" min="0"
+              value={formData.kilometraje}
+              onChange={(e) => updateForm({ kilometraje: e.target.value })}
+              placeholder="85000"
+              className={`s-input ${errores.kilometraje ? 's-input-err' : ''}`}
+              style={{ paddingRight: 50 }}
+            />
+            <span style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: '#6B6B6B', fontSize: 13, fontWeight: 500 }}>km</span>
+          </div>
+          {errores.kilometraje && <p className="s-error">âš  {errores.kilometraje}</p>}
+          <div style={{ marginTop: 16 }}>
+            <PhotoCapture label="Foto del odÃ³metro" required preview={formData.foto_km_preview} onChange={handleFotoKm} />
+            {errores.foto_km && <p className="s-error">âš  {errores.foto_km}</p>}
+          </div>
+        </div>
+
+        {/* Combustible */}
+        <div className="s-card">
+          <label className="s-label" style={{ marginBottom: 12 }}>Nivel de combustible <span style={{ color: '#FF453A' }}>*</span></label>
+          <FuelSelector value={formData.combustible} onChange={(v) => updateForm({ combustible: v })} />
+          {errores.combustible && <p className="s-error">âš  {errores.combustible}</p>}
+          <div style={{ marginTop: 16 }}>
+            <PhotoCapture label="Foto del indicador" required preview={formData.foto_combustible_preview} onChange={handleFotoCombustible} />
+            {errores.foto_combustible && <p className="s-error">âš  {errores.foto_combustible}</p>}
+          </div>
+        </div>
+
+        {/* Llaves */}
+        <div>
+          <label className="s-label">Llaves entregadas <span style={{ color: '#FF453A' }}>*</span></label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[0,1,2,3,4].map((n) => {
+              const active = formData.llaves === n
+              return (
+                <button key={n} type="button" onClick={() => updateForm({ llaves: n })}
+                  style={{
+                    flex: 1, padding: '14px 0', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer', transition: 'all 150ms', fontFamily: 'inherit',
+                    border: active ? '1.5px solid #a98225' : '1.5px solid #E0E0E0',
+                    background: active ? '#a98225' : '#FFFFFF',
+                    color: active ? '#FFFFFF' : '#6B6B6B',
+                  }}
+                >{n}</button>
+              )
+            })}
+          </div>
+          {errores.llaves && <p className="s-error">âš  {errores.llaves}</p>}
+        </div>
+
+        {/* DocumentaciÃ³n */}
+        <div>
+          <label className="s-label">DocumentaciÃ³n entregada</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {DOCS.map((doc) => {
+              const checked = (formData.documentacion || []).includes(doc.value)
+              return (
+                <label key={doc.value}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 12, cursor: 'pointer', transition: 'border-color 150ms',
+                    border: checked ? '1.5px solid #a98225' : '1.5px solid #E0E0E0',
+                    background: '#FFFFFF',
+                  }}
+                >
+                  <input type="checkbox" className="s-checkbox" checked={checked} onChange={() => toggleDoc(doc.value)} />
+                  <span style={{ color: checked ? '#111114' : '#6B6B6B', fontSize: 15, fontWeight: 500 }}>{doc.label}</span>
+                </label>
+              )
+            })}
+          </div>
+          {(formData.documentacion || []).includes('otros') && (
+            <input type="text" value={formData.documentacion_otros}
+              onChange={(e) => updateForm({ documentacion_otros: e.target.value })}
+              placeholder="Especifica cuÃ¡lesâ€¦"
+              className="s-input" style={{ marginTop: 8 }} />
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 36 }}>
+        <button type="button" onClick={handleSubmit} className="s-btn-primary">Continuar</button>
+        <button type="button" onClick={onBack}    className="s-btn-secondary">Volver</button>
+      </div>
+    </div>
+  )
+}
+
