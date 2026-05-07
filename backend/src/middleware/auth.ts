@@ -1,9 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
 
+const nodeEnv = process.env.NODE_ENV ?? 'development';
+const envSuffix = nodeEnv === 'development' ? 'DEV' : 'PROD';
+
+function pick(nameBase: string): string | undefined {
+  return process.env[`${nameBase}_${envSuffix}`];
+}
+
+function requireEnv(name: string, value: string | undefined): string {
+  if (!value) throw new Error(`Missing env var: ${name}`);
+  return value;
+}
+
 const supabaseAnon = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_ANON_KEY!
+  requireEnv(`SUPABASE_URL_${envSuffix}`, pick('SUPABASE_URL') ?? process.env.SUPABASE_URL),
+  requireEnv(
+    `SUPABASE_ANON_KEY_${envSuffix}`,
+    pick('SUPABASE_ANON_KEY') ?? process.env.SUPABASE_ANON_KEY
+  )
 );
 
 export interface AuthRequest extends Request {
