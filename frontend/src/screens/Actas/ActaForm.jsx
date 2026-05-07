@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FormProvider, useForm } from '../../context/FormContext'
 import ProgressBar from '../../components/common/ProgressBar'
 import Section1_Cliente from '../../components/sections/Section1_Cliente'
@@ -11,6 +11,36 @@ import Section7_RecepcionSECCO from '../../components/sections/Section7_Recepcio
 import Section8_Checklist from '../../components/sections/Section8_Checklist'
 import { actaService } from '../../services/actaService'
 import { generarPDFActa } from '../../utils/pdf'
+import { useToast } from '../../components/common/ToastProvider'
+import { validarSeccion1, validarSeccion2 } from '../../utils/validation'
+
+/** Marca/modelo “PENDIENTE” u otros marcadores: el vehículo aún no está capturado de verdad. */
+function textoEsPendientePlaceholder(val) {
+  const t = String(val ?? '').trim().toUpperCase()
+  if (!t) return true
+  return ['PENDIENTE', 'PEND.', 'N/A', 'NA', 'SIN DATO', 'SIN_DATO', 'SIN INFO', '—', '-'].includes(t)
+}
+
+/** Snapshot alineado con FormContext + respuesta GET /api/actas/:id (sin depender del estado React recién actualizado). */
+function datosSnapshotDesdeActaApi(acta) {
+  const c = acta?.clientes
+  const v = acta?.vehiculos
+  return {
+    acta_id: acta?.id ?? null,
+    cliente_id: acta?.cliente_id ?? c?.id ?? null,
+    vehiculo_id: acta?.vehiculo_id ?? v?.id ?? null,
+    nombre: c?.nombre ?? '',
+    rut: c?.rut ?? '',
+    telefono: c?.telefono ?? '',
+    email: c?.email ?? '',
+    marca: v?.marca ?? '',
+    modelo: v?.modelo ?? '',
+    anio: v?.anio ?? '',
+    patente: v?.patente ?? '',
+    vin: v?.vin ?? '',
+    color: v?.color ?? '',
+  }
+}
 
 // ── Pantalla de éxito ──────────────────────────────────────────
 function ExitoScreen({ formData, onVolver }) {
@@ -64,26 +94,202 @@ function ExitoScreen({ formData, onVolver }) {
 }
 
 // ── Formulario interno (usa useForm) ───────────────────────────
-function ActaFormInner({ onVolver }) {
-  const { formData, updateForm, resetForm } = useForm()
+function ActaFormInner({ onVolver, initialActa }) {
+  const toast = useToast()
+  const { formData, updateForm, resetForm, cargarDesdeActa } = useForm()
   const [seccion, setSeccion] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [actaGuardada, setActaGuardada] = useState(false)
+  const [saveState, setSaveState] = useState({ state: 'idle', message: '' }) // idle | saving | saved | error
+  const lastSavedHashRef = useRef('')
 
   function scrollTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  function buildBorradorPayload() {
+    // Importante: no enviar File ni previews (fotos se suben por /api/fotos/*).
+    // En borrador guardamos el "estado del formulario" para reanudar.
+    return {
+      // IDs si existen
+      acta_id: formData.acta_id || null,
+      numero_acta: formData.numero_acta || null,
+      cliente_id: formData.cliente_id || null,
+      vehiculo_id: formData.vehiculo_id || null,
+
+      // Cliente
+      nombre: formData.nombre || '',
+      rut: formData.rut || '',
+      telefono: formData.telefono || '',
+      email: formData.email || '',
+
+      // Vehículo
+      marca: formData.marca || '',
+      modelo: formData.modelo || '',
+      anio: formData.anio || '',
+      patente: formData.patente || '',
+      vin: formData.vin || null,
+      color: formData.color || null,
+
+      // Ingreso
+      fecha_ingreso: formData.fecha_ingreso || null,
+      hora_ingreso: formData.hora_ingreso || null,
+      km: formData.kilometraje !== '' && formData.kilometraje != null ? Number(formData.kilometraje) : null,
+      combustible: formData.combustible || null,
+      llaves: formData.llaves !== '' && formData.llaves != null ? Number(formData.llaves) : null,
+      documentacion: formData.documentacion || [],
+      documentacion_otros: formData.documentacion_otros || null,
+
+      // Estado
+      estado_exterior: formData.estado_exterior || null,
+      detalle_exterior: formData.detalle_exterior || null,
+      estado_interior: formData.estado_interior || null,
+      detalle_interior: formData.detalle_interior || null,
+
+      // Trabajo
+      trabajo_solicitado: formData.trabajo_solicitado || null,
+
+      // Declaración + firma cliente (sin fotos)
+      acepta_declaracion: !!formData.acepta_declaracion,
+      acepta_responsabilidad_objetos: !!formData.acepta_responsabilidad_objetos,
+      acepta_pruebas_ruta: !!formData.acepta_pruebas_ruta,
+      nombre_cliente: formData.nombre_cliente || null,
+      firma_cliente: formData.firma_cliente || null,
+      fecha_firma_cliente: formData.fecha_firma_cliente || null,
+
+      // Recepción SECCO + firma
+      nombre_responsable: formData.nombre_responsable || null,
+      cargo_responsable: formData.cargo_responsable || null,
+      firma_secco: formData.firma_secco || null,
+      fecha_firma_secco: formData.fecha_firma_secco || null,
+
+      // Estado del acta
+      status: 'borrador',
+    }
+  }
+
+  const borradorHash = useMemo(() => {
+    const p = buildBorradorPayload()
+    // Hash simple para evitar POST repetidos idénticos
+    return JSON.stringify(p)
+  }, [
+    formData.acta_id,
+    formData.numero_acta,
+    formData.cliente_id,
+    formData.vehiculo_id,
+    formData.nombre,
+    formData.rut,
+    formData.telefono,
+    formData.email,
+    formData.marca,
+    formData.modelo,
+    formData.anio,
+    formData.patente,
+    formData.vin,
+    formData.color,
+    formData.fecha_ingreso,
+    formData.hora_ingreso,
+    formData.kilometraje,
+    formData.combustible,
+    formData.llaves,
+    formData.documentacion,
+    formData.documentacion_otros,
+    formData.estado_exterior,
+    formData.detalle_exterior,
+    formData.estado_interior,
+    formData.detalle_interior,
+    formData.trabajo_solicitado,
+    formData.acepta_declaracion,
+    formData.acepta_responsabilidad_objetos,
+    formData.acepta_pruebas_ruta,
+    formData.nombre_cliente,
+    formData.firma_cliente,
+    formData.fecha_firma_cliente,
+    formData.nombre_responsable,
+    formData.cargo_responsable,
+    formData.firma_secco,
+    formData.fecha_firma_secco,
+  ])
+
+  async function guardarBorrador({ force = false } = {}) {
+    // No guardar mientras estamos cerrando/guardando final
+    if (loading) return
+    // Evitar guardar borrador vacío
+    const tieneAlgo = !!(formData.nombre || formData.rut || formData.patente || formData.acta_id)
+    if (!tieneAlgo) return
+
+    if (!force && borradorHash === lastSavedHashRef.current) return
+
+    setSaveState({ state: 'saving', message: 'Guardando…' })
+    try {
+      const payload = JSON.parse(borradorHash)
+      const saved = await actaService.guardarBorrador(payload)
+
+      // Si backend devuelve IDs, persistirlos en el form.
+      if (saved?.id && !formData.acta_id) updateForm({ acta_id: saved.id })
+      if (saved?.numero_acta && !formData.numero_acta) updateForm({ numero_acta: saved.numero_acta })
+      if (saved?.cliente_id && !formData.cliente_id) updateForm({ cliente_id: saved.cliente_id })
+      if (saved?.vehiculo_id && !formData.vehiculo_id) updateForm({ vehiculo_id: saved.vehiculo_id })
+
+      lastSavedHashRef.current = borradorHash
+      setSaveState({ state: 'saved', message: 'Guardado' })
+    } catch (e) {
+      setSaveState({ state: 'error', message: e?.message ? `No guardado: ${e.message}` : 'No se pudo guardar' })
+    }
+  }
+
   function next() {
-    setSeccion((s) => Math.min(s + 1, 8))
-    scrollTop()
+    guardarBorrador({ force: true }).finally(() => {
+      setSeccion((s) => Math.min(s + 1, 8))
+      scrollTop()
+    })
   }
 
   function back() {
     setSeccion((s) => Math.max(s - 1, 1))
     scrollTop()
   }
+
+  function calcularSeccionInicialDesdeForm(datos) {
+    // Conservador: solo “salta” Cliente/Vehículo cuando los datos ya están completos.
+    // No intentamos saltar secciones con fotos/checklists porque dependen de archivos/estado local.
+    const e1 = validarSeccion1(datos)
+    const clienteOk = (datos.cliente_id && Object.keys(e1).length === 0)
+    if (!clienteOk) return 1
+
+    const e2 = validarSeccion2(datos)
+    const vehiculoPlaceholder =
+      textoEsPendientePlaceholder(datos.marca) || textoEsPendientePlaceholder(datos.modelo)
+    const vehiculoOk =
+      datos.vehiculo_id && Object.keys(e2).length === 0 && !vehiculoPlaceholder
+    if (!vehiculoOk) return 2
+
+    return 3
+  }
+
+  // Cargar acta inicial (modo edición desde detalle)
+  useEffect(() => {
+    if (!initialActa?.id) return
+    // En modo edición, sincronizamos desde el backend para traer TODO el estado de la acta
+    // (por ejemplo km/combustible/documentación), no solo cliente/vehículo.
+    setSaveState({ state: 'saving', message: 'Sincronizando…' })
+    actaService.obtener(initialActa.id)
+      .then((full) => {
+        cargarDesdeActa(full)
+        setSaveState({ state: 'saved', message: 'Acta cargada' })
+        const snapshot = datosSnapshotDesdeActaApi(full)
+        setSeccion(calcularSeccionInicialDesdeForm(snapshot))
+      })
+      .catch(() => {
+        // Fallback: al menos cargar lo que venía en `initialActa`.
+        cargarDesdeActa(initialActa)
+        setSaveState({ state: 'saved', message: 'Acta cargada' })
+        const snapshot = datosSnapshotDesdeActaApi(initialActa)
+        setSeccion(calcularSeccionInicialDesdeForm(snapshot))
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialActa?.id])
 
   async function subirFotosActa(actaId) {
     const fotos = formData.fotos || {}
@@ -140,6 +346,9 @@ function ActaFormInner({ onVolver }) {
       let numeroActa = formData.numero_acta
 
       const payload = {
+        // IDs (si existen, el backend debería usarlos para evitar duplicados)
+        cliente_id: formData.cliente_id || null,
+        vehiculo_id: formData.vehiculo_id || null,
         // Cliente
         nombre: formData.nombre,
         rut: formData.rut,
@@ -196,12 +405,14 @@ function ActaFormInner({ onVolver }) {
       // Generar PDF
       await generarPDFActa({ ...formData, acta_id: actaId, numero_acta: numeroActa })
 
+      toast.success('Acta guardada correctamente')
       resetForm()
       setActaGuardada(true)
       scrollTop()
     } catch (e) {
       console.error(e)
       setError(`Error al procesar el acta: ${e.message}`)
+      toast.error(e?.message ? `Error al guardar: ${e.message}` : 'Error al guardar')
     } finally {
       setLoading(false)
     }
@@ -212,7 +423,23 @@ function ActaFormInner({ onVolver }) {
   }
 
   return (
-    <div style={{ minHeight: '100svh', background: '#FFFFFF' }}>
+    <div style={{ minHeight: '100svh', background: '#F5F5F5' }}>
+      <style>{`
+        .acta-stage {
+          width: 100%;
+          max-width: 960px;
+          margin: 0 auto;
+          padding: 18px 16px 40px;
+        }
+        .acta-progressWrap {
+          width: 100%;
+          max-width: 960px;
+          margin: 0 auto;
+        }
+        @media (max-width: 640px) {
+          .acta-stage { padding: 14px 10px 32px; }
+        }
+      `}</style>
       {/* Header */}
       <div style={{
         background: '#FFFFFF', borderBottom: '1px solid #E0E0E0',
@@ -234,11 +461,24 @@ function ActaFormInner({ onVolver }) {
             {formData.numero_acta ? `#${formData.numero_acta}` : formData.patente}
           </span>
         )}
+        <span style={{
+          marginLeft: 10,
+          fontSize: 12,
+          fontWeight: 700,
+          color: saveState.state === 'error' ? '#FF453A' : saveState.state === 'saving' ? '#6B6B6B' : '#1a7a34',
+          opacity: saveState.state === 'idle' ? 0.0 : 1,
+          transition: 'opacity 200ms ease',
+          whiteSpace: 'nowrap',
+        }}>
+          {saveState.message}
+        </span>
       </div>
 
-      <ProgressBar seccionActual={seccion} />
+      <div className="acta-progressWrap">
+        <ProgressBar seccionActual={seccion} />
+      </div>
 
-      <div style={{ paddingTop: 24, paddingBottom: 40 }}>
+      <div className="acta-stage">
         {seccion === 1 && <Section1_Cliente onNext={next} />}
         {seccion === 2 && <Section2_Vehiculo onNext={next} onBack={back} />}
         {seccion === 3 && <Section3_Ingreso onNext={next} onBack={back} />}
@@ -270,10 +510,10 @@ function ActaFormInner({ onVolver }) {
 }
 
 // ── Export principal (envuelve con FormProvider) ───────────────
-export default function ActaForm({ onVolver }) {
+export default function ActaForm({ onVolver, initialActa }) {
   return (
-    <FormProvider>
-      <ActaFormInner onVolver={onVolver} />
+    <FormProvider restore={false}>
+      <ActaFormInner onVolver={onVolver} initialActa={initialActa} />
     </FormProvider>
   )
 }

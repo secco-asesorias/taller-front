@@ -76,18 +76,19 @@ function restaurarDesdeSession() {
   return null
 }
 
-export function FormProvider({ children }) {
-  const [formData, setFormData] = useState(() => restaurarDesdeSession() || initialState())
+export function FormProvider({ children, restore = true }) {
+  const [formData, setFormData] = useState(() => (restore ? (restaurarDesdeSession() || initialState()) : initialState()))
 
   // Sincronizar al sessionStorage en cada cambio (excepto campos no serializables)
   useEffect(() => {
+    if (!restore) return
     try {
       const toSave = Object.fromEntries(
         Object.entries(formData).filter(([k]) => !SKIP_FIELDS.has(k))
       )
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(toSave))
     } catch {}
-  }, [formData])
+  }, [formData, restore])
 
   const updateForm = useCallback((campos) => {
     setFormData((prev) => ({ ...prev, ...campos }))
@@ -111,7 +112,7 @@ export function FormProvider({ children }) {
       rut: cliente?.rut || '',
       telefono: cliente?.telefono || '',
       email: cliente?.email || '',
-      nombre_cliente: cliente?.nombre || '',
+      nombre_cliente: acta.nombre_cliente || cliente?.nombre || '',
       // Vehículo
       marca: vehiculo?.marca || '',
       modelo: vehiculo?.modelo || '',
@@ -126,6 +127,33 @@ export function FormProvider({ children }) {
       vehiculo_id: acta.vehiculo_id,
       fecha_ingreso: acta.fecha_ingreso || now.toISOString().slice(0, 10),
       hora_ingreso: acta.hora_ingreso?.slice(0, 5) || now.toTimeString().slice(0, 5),
+
+      // Sección 3 (Ingreso)
+      kilometraje: (acta.km ?? '') === 0 ? '' : (acta.km ?? ''),
+      combustible: acta.combustible || '',
+      llaves: (acta.llaves ?? '') === 0 ? '' : (acta.llaves ?? ''),
+      documentacion: Array.isArray(acta.documentacion) ? acta.documentacion : (acta.documentacion ? [acta.documentacion] : []),
+      documentacion_otros: acta.documentacion_otros || '',
+
+      // Sección 4 (Estado del vehículo)
+      estado_exterior: acta.estado_exterior || '',
+      detalle_exterior: acta.detalle_exterior || '',
+      estado_interior: acta.estado_interior || '',
+      detalle_interior: acta.detalle_interior || '',
+
+      // Sección 5 (Trabajo solicitado)
+      trabajo_solicitado: acta.trabajo_solicitado || '',
+      presupuesto_inicial_id: acta.presupuesto_inicial_id || null,
+
+      // Sección 6 (Aceptaciones + firma cliente)
+      acepta_declaracion: !!acta.acepta_declaracion,
+      acepta_responsabilidad_objetos: !!acta.acepta_responsabilidad_objetos,
+      acepta_pruebas_ruta: !!acta.acepta_pruebas_ruta,
+      // Nota: firmas y fotos no se re-hidratan como File/base64 aquí.
+
+      // Sección 7 (Recepción SECCO)
+      nombre_responsable: acta.nombre_responsable || acta.tecnico_nombre || acta.tc_nombre || '',
+      cargo_responsable: acta.cargo_responsable || '',
     })
   }, [])
 

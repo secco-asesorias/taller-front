@@ -1,5 +1,38 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../services/api'
+
+/** Etiquetas legibles del rol (tabla `perfiles`). */
+const ROL_ETIQUETA = {
+  admin: 'Administrador',
+  tecnico: 'Técnico',
+  recepcionista: 'Recepción',
+}
+
+function inicialesDesdeTexto(text) {
+  if (!text?.trim()) return '·'
+  const t = text.trim()
+  const parts = t.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  const one = parts[0] || t
+  return one.slice(0, 2).toUpperCase()
+}
+
+/**
+ * Datos de presentación del usuario: combina perfil en BD con claims/metadata del JWT
+ * (la sesión que Supabase guarda en localStorage, p. ej. sb-…-auth-token).
+ */
+function datosSesionParaUI(usuario, perfil) {
+  const meta = usuario?.user_metadata || {}
+  const nombrePerfil = perfil?.nombre?.trim() || ''
+  const metaNombre = (meta.full_name || meta.name || meta.display_name || '').trim()
+  const email = (usuario?.email || '').trim()
+  const parteLocal = email ? email.split('@')[0] : ''
+  const nombre =
+    nombrePerfil || metaNombre || parteLocal || (email ? email : 'Usuario')
+  const avatarUrl = (meta.avatar_url || meta.picture || '').trim() || null
+  const iniciales = inicialesDesdeTexto(nombrePerfil || metaNombre || parteLocal || email)
+  return { nombre, nombrePerfil, email: email || null, avatarUrl, iniciales }
+}
 
 async function cargarPerfil(userId) {
   const { data, error } = await supabase
@@ -67,11 +100,18 @@ export function useAuth() {
 }
 
 export function useRol() {
-  const { perfil } = useAuth()
+  const { usuario, perfil } = useAuth()
   const rol = perfil?.rol || null
+  const sesionUI = useMemo(() => datosSesionParaUI(usuario, perfil), [usuario, perfil])
   return {
     rol,
-    nombre: perfil?.nombre || '',
+    /** Nombre para mostrar: perfil → metadata Supabase → parte local del email. */
+    nombre: sesionUI.nombre,
+    nombrePerfil: sesionUI.nombrePerfil,
+    email: sesionUI.email,
+    avatarUrl: sesionUI.avatarUrl,
+    iniciales: sesionUI.iniciales,
+    rolEtiqueta: rol ? ROL_ETIQUETA[rol] || rol : '',
     esAdmin: rol === 'admin',
     esTecnico: rol === 'tecnico',
     esRecepcionista: rol === 'recepcionista',

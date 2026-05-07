@@ -12,7 +12,7 @@ export const ActaCreateSchema = z.object({
 export const ActaUpdateSchema = z.object({
   km: z.number().min(0).optional(),
   combustible: z.string().optional(),
-  llaves: z.boolean().optional(),
+  llaves: z.union([z.boolean(), z.number().int().min(0)]).optional(),
   documentacion: z.array(z.string()).optional(),
   estado_exterior: z.string().optional(),
   detalle_exterior: z.string().optional(),

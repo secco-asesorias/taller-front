@@ -45,7 +45,7 @@ export default function Section2_Vehiculo({ onNext, onBack }) {
           Torre de Control
         </p>
         <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
-          IdentificaciÃ³n del VehÃ­culo
+          Identificación del Vehí­culo
         </h2>
         <div className="s-divider" />
       </div>
@@ -84,14 +84,14 @@ export default function Section2_Vehiculo({ onNext, onBack }) {
         {/* AÃ±o + Patente */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
-            <label className="s-label">AÃ±o <span style={{ color: '#FF453A' }}>*</span></label>
+            <label className="s-label">Año <span style={{ color: '#FF453A' }}>*</span></label>
             <select
               value={formData.anio}
               onChange={(e) => handleChange('anio', Number(e.target.value))}
               onBlur={() => handleBlur('anio')}
               className={`s-input ${errores.anio ? 's-input-err' : ''}`}
             >
-              <option value="">AÃ±o</option>
+              <option value="">Año</option>
               {ANIOS.map((a) => <option key={a} value={a}>{a}</option>)}
             </select>
             {errores.anio && <p className="s-error">âš  {errores.anio}</p>}
@@ -103,10 +103,10 @@ export default function Section2_Vehiculo({ onNext, onBack }) {
               type="text"
               autoCapitalize="characters"
               value={formData.patente}
-              onChange={(e) => handleChange('patente', e.target.value.toUpperCase())}
+              onChange={(e) => handleChange('patente', e.target.value.replace(/\s/g, '').toUpperCase())}
               onBlur={() => handleBlur('patente')}
               placeholder="ABCD12"
-              maxLength={8}
+              maxLength={6}
               className={`s-input ${errores.patente ? 's-input-err' : ''}`}
               style={{ fontFamily: 'monospace', letterSpacing: '2px' }}
             />
@@ -127,7 +127,7 @@ export default function Section2_Vehiculo({ onNext, onBack }) {
                 autoCapitalize="characters"
                 value={formData.vin}
                 onChange={(e) => updateForm({ vin: e.target.value.toUpperCase() })}
-                placeholder="NÃºmero de chasis"
+                placeholder="Número de chasis"
                 maxLength={17}
                 className="s-input"
                 style={{ fontFamily: 'monospace' }}
@@ -140,7 +140,7 @@ export default function Section2_Vehiculo({ onNext, onBack }) {
                 autoCapitalize="words"
                 value={formData.color}
                 onChange={(e) => updateForm({ color: e.target.value })}
-                placeholder="Blanco, Negro metalizadoâ€¦"
+                placeholder="Blanco, Negro metalizado"
                 className="s-input"
               />
             </div>

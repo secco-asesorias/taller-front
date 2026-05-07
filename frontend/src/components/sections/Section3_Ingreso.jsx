@@ -5,9 +5,9 @@ import PhotoCapture from '../common/PhotoCapture'
 import FuelSelector from '../common/FuelSelector'
 
 const DOCS = [
-  { value: 'permiso',  label: 'Permiso de circulaciÃ³n' },
+  { value: 'permiso',  label: 'Permiso de circulación' },
   { value: 'soap',     label: 'SOAP' },
-  { value: 'revision', label: 'RevisiÃ³n tÃ©cnica' },
+  { value: 'revision', label: 'Revisión técnica' },
   { value: 'ninguna',  label: 'Ninguna' },
   { value: 'otros',    label: 'Otros' },
 ]
@@ -50,7 +50,7 @@ export default function Section3_Ingreso({ onNext, onBack }) {
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
         <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>
-          TÃ©cnico
+          Técnico
         </p>
         <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
           Datos de Ingreso
@@ -91,7 +91,7 @@ export default function Section3_Ingreso({ onNext, onBack }) {
           </div>
           {errores.kilometraje && <p className="s-error">âš  {errores.kilometraje}</p>}
           <div style={{ marginTop: 16 }}>
-            <PhotoCapture label="Foto del odÃ³metro" required preview={formData.foto_km_preview} onChange={handleFotoKm} />
+            <PhotoCapture label="Foto del odómetro" required preview={formData.foto_km_preview} onChange={handleFotoKm} />
             {errores.foto_km && <p className="s-error">âš  {errores.foto_km}</p>}
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function Section3_Ingreso({ onNext, onBack }) {
 
         {/* DocumentaciÃ³n */}
         <div>
-          <label className="s-label">DocumentaciÃ³n entregada</label>
+          <label className="s-label">Documentación entregada</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {DOCS.map((doc) => {
               const checked = (formData.documentacion || []).includes(doc.value)

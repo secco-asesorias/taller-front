@@ -6,4 +6,5 @@ export const vehiculoService = {
   listarPorCliente: (clienteId) => api.get(`/api/vehiculos/cliente/${clienteId}`),
   crear: (datos) => api.post('/api/vehiculos', datos),
   actualizar: (id, datos) => api.put(`/api/vehiculos/${id}`, datos),
+  eliminar: (id) => api.delete(`/api/vehiculos/${id}`),
 };

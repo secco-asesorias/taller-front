@@ -43,4 +43,10 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
   } catch (e) { next(e); }
 });
 
+router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json(await svc.eliminarCliente(p(req).id));
+  } catch (e) { next(e); }
+});
+
 export default router;

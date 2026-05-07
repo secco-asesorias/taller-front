@@ -53,4 +53,10 @@ router.patch('/:id/cerrar', requireRole('admin', 'recepcionista'), async (req: A
   } catch (e) { next(e); }
 });
 
+router.delete('/:id', requireRole('admin'), async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json(await svc.eliminarActa(p(req).id));
+  } catch (e) { next(e); }
+});
+
 export default router;

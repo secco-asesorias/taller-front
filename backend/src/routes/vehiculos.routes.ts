@@ -7,6 +7,13 @@ const router = Router();
 router.use(authenticate);
 const p = (req: AuthRequest) => req.params as Record<string, string>;
 
+router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { search, limite } = req.query as Record<string, string>;
+    res.json(await svc.listarVehiculos(Number(limite) || 50, search));
+  } catch (e) { next(e); }
+});
+
 router.get('/patente/:patente', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const data = await svc.buscarVehiculoPorPatente(p(req).patente);
@@ -38,6 +45,12 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
   try {
     const datos = VehiculoSchema.partial().parse(req.body);
     res.json(await svc.upsertVehiculo({ id: p(req).id, ...datos }));
+  } catch (e) { next(e); }
+});
+
+router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json(await svc.eliminarVehiculo(p(req).id));
   } catch (e) { next(e); }
 });
 

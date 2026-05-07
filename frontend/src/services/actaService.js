@@ -11,6 +11,7 @@ export const actaService = {
   crear: (datos) => api.post('/api/actas', datos),
   actualizar: (id, datos) => api.put(`/api/actas/${id}`, datos),
   cerrar: (id) => api.patch(`/api/actas/${id}/cerrar`, {}),
+  eliminar: (id) => api.delete(`/api/actas/${id}`),
 
   subirFoto: (actaId, tipo, base64, mimetype = 'image/jpeg', ext = 'jpg') =>
     api.post('/api/fotos/acta', { actaId, tipo, base64, mimetype, ext }),

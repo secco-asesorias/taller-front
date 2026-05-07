@@ -38,3 +38,14 @@ export async function obtenerClientePorRut(rut: string): Promise<Record<string, 
   if (error) throw error;
   return data;
 }
+
+export async function eliminarCliente(id: string): Promise<Record<string, unknown>> {
+  const { data, error } = await supabase
+    .from('clientes')
+    .delete()
+    .eq('id', id)
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data;
+}

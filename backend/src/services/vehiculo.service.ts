@@ -41,3 +41,29 @@ export async function listarVehiculosPorCliente(clienteId: string): Promise<Reco
   if (error) throw error;
   return data || [];
 }
+
+export async function listarVehiculos(limite = 50, search = ''): Promise<Record<string, unknown>[]> {
+  let query = supabase
+    .from('vehiculos')
+    .select('*, clientes(*)')
+    .order('created_at', { ascending: false });
+
+  if (search) {
+    query = query.or(`patente.ilike.%${search}%,marca.ilike.%${search}%,modelo.ilike.%${search}%`);
+  }
+
+  const { data, error } = await query.limit(limite);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function eliminarVehiculo(id: string): Promise<Record<string, unknown>> {
+  const { data, error } = await supabase
+    .from('vehiculos')
+    .delete()
+    .eq('id', id)
+    .select('id')
+    .single();
+  if (error) throw error;
+  return data;
+}

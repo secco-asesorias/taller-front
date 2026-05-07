@@ -50,10 +50,15 @@ export function validarTelefono(tel) {
   return limpio.length >= 8 && limpio.length <= 12
 }
 
-// Valida patente chilena (AA-BB-11 o BBBB-11)
+// Valida patente chilena: siempre 6 caracteres (sin espacios). Formatos comunes: AABB12, BBBB12, AA1234
 export function validarPatente(patente) {
-  const p = patente.replace(/\s/g, '').toUpperCase()
-  return /^[A-Z]{2}[A-Z0-9]{2}\d{2}$/.test(p) || /^[A-Z]{4}\d{2}$/.test(p) || /^[A-Z]{2}\d{4}$/.test(p) || p.length >= 4
+  const p = String(patente ?? '').replace(/\s/g, '').toUpperCase()
+  if (p.length !== 6) return false
+  return (
+    /^[A-Z]{2}[A-Z0-9]{2}\d{2}$/.test(p) ||
+    /^[A-Z]{4}\d{2}$/.test(p) ||
+    /^[A-Z]{2}\d{4}$/.test(p)
+  )
 }
 
 // Validar sección 1
@@ -85,7 +90,15 @@ export function validarSeccion2(datos) {
   if (!datos.modelo?.trim()) errores.modelo = 'El modelo es obligatorio'
   if (!datos.anio || datos.anio < 1900 || datos.anio > new Date().getFullYear() + 1)
     errores.anio = 'Año inválido'
-  if (!datos.patente?.trim()) errores.patente = 'La patente es obligatoria'
+  if (!datos.patente?.trim()) {
+    errores.patente = 'La patente es obligatoria'
+  } else if (!validarPatente(datos.patente)) {
+    const len = String(datos.patente).replace(/\s/g, '').length
+    errores.patente =
+      len !== 6
+        ? 'La patente debe tener exactamente 6 caracteres'
+        : 'Formato de patente inválido'
+  }
   return errores
 }
 
