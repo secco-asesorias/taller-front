@@ -16,7 +16,7 @@ import { actaService } from './services/actaService'
 import DiagnosticosListScreen from './screens/Diagnostico/DiagnosticosListScreen'
 import DiagnosticoForm from './screens/Diagnostico/DiagnosticoForm'
 import CotizacionesListScreen from './screens/Cotizaciones/CotizacionesListScreen'
-import PresupuestoForm from './screens/Cotizaciones/PresupuestoForm'
+import PresupuestoForm, { nuevaCotizacionPlantilla } from './screens/Cotizaciones/PresupuestoForm'
 import OTListScreen from './screens/OrdenesTrabajo/OTListScreen'
 import OTForm from './screens/OrdenesTrabajo/OTForm'
 import ClientesListScreen from './screens/Clientes/ClientesListScreen'
@@ -95,7 +95,7 @@ function ActaEditarRoute() {
     )
   }
 
-  return <ActaForm initialActa={acta} onVolver={() => navigate(`/actas/${actaId}`)} />
+  return <ActaForm key={actaId} initialActa={acta} onVolver={() => navigate(`/actas/${actaId}`)} />
 }
 
 function DiagnosticoDetalleRoute() {
@@ -127,15 +127,42 @@ function DiagnosticosListRoute() {
   return <DiagnosticosListScreen onNavigate={onNavigate} />
 }
 
+function CotizacionNuevaRoute() {
+  const navigate = useNavigate()
+  return (
+    <PresupuestoForm
+      cotizacionInicial={nuevaCotizacionPlantilla()}
+      onVolver={() => navigate('/cotizaciones')}
+      onPersistido={(cot) => navigate(`/cotizaciones/${cot.id}`, { replace: true })}
+      onAbrirOT={(ot) => navigate(`/ordenes-trabajo/${ot.id}`)}
+    />
+  )
+}
+
 function CotizacionDetalleRoute() {
   const { cotId } = useParams()
   const navigate = useNavigate()
   const [cotizacionActiva, setCotizacionActiva] = useState(null)
   const [otActiva, setOtActiva] = useState(null)
+  const [cotizacionError, setCotizacionError] = useState('')
+  const [cotizacionCargando, setCotizacionCargando] = useState(true)
 
   useEffect(() => {
+    setCotizacionActiva(null)
+    setCotizacionError('')
+    setCotizacionCargando(true)
     import('./services/cotizacionService').then(({ cotizacionService }) => {
-      cotizacionService.obtener(cotId).then(setCotizacionActiva).catch(() => setCotizacionActiva(null))
+      cotizacionService
+        .obtener(cotId)
+        .then((cot) => {
+          setCotizacionActiva(cot)
+          setCotizacionError('')
+        })
+        .catch((e) => {
+          setCotizacionActiva(null)
+          setCotizacionError(e?.message || 'No se pudo cargar la cotización')
+        })
+        .finally(() => setCotizacionCargando(false))
     })
   }, [cotId])
 
@@ -143,10 +170,32 @@ function CotizacionDetalleRoute() {
     return <OTForm otInicial={otActiva} onVolver={() => { setOtActiva(null); navigate('/ordenes-trabajo') }} />
   }
 
-  if (!cotizacionActiva) {
+  if (cotizacionCargando) {
     return (
       <div style={{ padding: '48px 16px', textAlign: 'center' }}>
         <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando cotización...</p>
+      </div>
+    )
+  }
+
+  if (!cotizacionActiva && cotizacionError) {
+    return (
+      <div style={{ padding: '48px 16px', textAlign: 'center', maxWidth: 420, margin: '0 auto' }}>
+        <p className="s-error" style={{ marginBottom: 16 }}>{cotizacionError}</p>
+        <button type="button" className="s-btn-primary" onClick={() => navigate('/cotizaciones')}>
+          Volver al listado
+        </button>
+      </div>
+    )
+  }
+
+  if (!cotizacionActiva) {
+    return (
+      <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <p style={{ color: '#6B6B6B', fontSize: 14 }}>No hay datos de cotización.</p>
+        <button type="button" className="s-btn-secondary" style={{ marginTop: 16 }} onClick={() => navigate('/cotizaciones')}>
+          Volver al listado
+        </button>
       </div>
     )
   }
@@ -212,6 +261,7 @@ function AppRoutes() {
         <Route path="diagnosticos/:diagId" element={<DiagnosticoDetalleRoute />} />
 
         <Route path="cotizaciones" element={<CotizacionesListRoute />} />
+        <Route path="cotizaciones/nueva" element={<CotizacionNuevaRoute />} />
         <Route path="cotizaciones/:cotId" element={<CotizacionDetalleRoute />} />
 
         <Route path="ordenes-trabajo" element={<OTListRoute />} />

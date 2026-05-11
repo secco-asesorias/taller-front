@@ -6,6 +6,8 @@ export const cotizacionService = {
     return api.get(`/api/cotizaciones${qs ? `?${qs}` : ''}`);
   },
   obtener: (id) => api.get(`/api/cotizaciones/${id}`),
+  crearBorrador: () => api.post('/api/cotizaciones/borrador', {}),
+  crearInicialDesdeActa: (actaId) => api.post(`/api/cotizaciones/desde-acta/${actaId}`, {}),
   crearDesdeDiagnostico: (diagnosticoId) => api.post(`/api/cotizaciones/desde-diagnostico/${diagnosticoId}`, {}),
   actualizar: (id, datos) => api.put(`/api/cotizaciones/${id}`, datos),
   aprobar: (id) => api.patch(`/api/cotizaciones/${id}/aprobar`, {}),

@@ -3,10 +3,14 @@ import { useForm } from '../../context/FormContext'
 import { validarSeccion5 } from '../../utils/validation'
 
 const SUGERENCIAS = [
-  'RevisiÃ³n general de motor','Cambio de aceite y filtros','RevisiÃ³n de frenos',
-  'AlineaciÃ³n y balanceo','RevisiÃ³n de suspensiÃ³n','DiagnÃ³stico elÃ©ctrico',
+  'Revisión general de motor','Cambio de aceite y filtros','Revisión de frenos',
+  'Alineación y balanceo','Revisión de suspensión','Diagnóstico eléctrico',
   'Falla en el motor','Ruido anormal','Check Engine encendido',
 ]
+
+/** Viñeta en UTF-8 (evita secuencias corruptas tipo "â€¢" en el archivo fuente). */
+const BULLET_PREFIX = '\n\u2022 '
+const BULLET_FIRST = '\u2022 '
 
 export default function Section5_TrabajoSolicitado({
   onNext,
@@ -23,8 +27,8 @@ export default function Section5_TrabajoSolicitado({
   const [errores, setErrores] = useState({})
 
   function agregarSugerencia(texto) {
-    const actual = formData.trabajo_solicitado || ''
-    const prefix = actual.trim() ? '\nâ€¢ ' : 'â€¢ '
+    const actual = formData.trabajo_solicitado ?? ''
+    const prefix = actual.trim() ? BULLET_PREFIX : BULLET_FIRST
     updateForm({ trabajo_solicitado: `${actual.trimEnd()}${prefix}${texto}` })
   }
 
@@ -35,7 +39,7 @@ export default function Section5_TrabajoSolicitado({
     const value = input.value
     const start = input.selectionStart
     const end = input.selectionEnd
-    const bullet = value.trim() ? '\nâ€¢ ' : 'â€¢ '
+    const bullet = value.trim() ? BULLET_PREFIX : BULLET_FIRST
     const next = `${value.slice(0, start)}${bullet}${value.slice(end)}`
     updateForm({ trabajo_solicitado: next })
     window.requestAnimationFrame(() => {
@@ -50,33 +54,34 @@ export default function Section5_TrabajoSolicitado({
     if (Object.keys(e).length === 0) onNext()
   }
 
-  const chars = (formData.trabajo_solicitado || '').length
+  const chars = (formData.trabajo_solicitado ?? '').length
+  const actaListaParaPresupuesto = !!formData.acta_id
 
   return (
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
-        <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>TÃ©cnico</p>
+        <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>Técnico</p>
         <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>Trabajo Solicitado</h2>
         <div className="s-divider" />
       </div>
 
       <div className="s-card" style={{ marginBottom: 16 }}>
-        <label className="s-label">DescripciÃ³n <span style={{ color: '#FF453A' }}>*</span></label>
+        <label className="s-label">Descripción <span style={{ color: '#FF453A' }}>*</span></label>
         <p style={{ color: '#6B6B6B', fontSize: 13, marginTop: 0, marginBottom: 12 }}>
-          Describe quÃ© busca el cliente y quÃ© espera del servicio.
+          Describe qué busca el cliente y qué espera del servicio.
         </p>
         <textarea
           rows={6}
-          value={formData.trabajo_solicitado}
+          value={formData.trabajo_solicitado ?? ''}
           onChange={(e) => updateForm({ trabajo_solicitado: e.target.value })}
           onKeyDown={handleKeyDown}
-          placeholder="El cliente trae el vehÃ­culo porqueâ€¦"
+          placeholder="El cliente trae el vehículo porque…"
           className={`s-input ${errores.trabajo_solicitado ? 's-input-err' : ''}`}
           style={{ resize: 'none' }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
           {errores.trabajo_solicitado
-            ? <p className="s-error" style={{ margin: 0 }}>âš  {errores.trabajo_solicitado}</p>
+            ? <p className="s-error" style={{ margin: 0 }}>{errores.trabajo_solicitado}</p>
             : <span />
           }
           <span style={{ color: '#AAAAAA', fontSize: 12 }}>{chars} car.</span>
@@ -90,7 +95,7 @@ export default function Section5_TrabajoSolicitado({
               Presupuesto inicial
             </p>
             <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0, lineHeight: 1.45 }}>
-              Puedes asociar un presupuesto sin asignar a esta acta. Luego seguirÃ¡ siendo posible crear un presupuesto final.
+              Puedes asociar un presupuesto sin asignar a esta acta. Luego seguirá siendo posible crear un presupuesto final.
             </p>
           </div>
           {presupuestoSeleccionadoId && (
@@ -100,10 +105,15 @@ export default function Section5_TrabajoSolicitado({
           )}
         </div>
 
+        {!actaListaParaPresupuesto && (
+          <p style={{ color: '#8a6a1a', fontSize: 12, margin: '0 0 10px', lineHeight: 1.4 }}>
+            Para crear o asignar un presupuesto, el acta debe estar guardada como borrador (avanzá desde cliente y vehículo, o esperá a que figure «Guardado» arriba).
+          </p>
+        )}
         <button
           type="button"
-          onClick={onCrearPresupuestoInicial}
-          disabled={creandoPresupuestoInicial || !!presupuestoSeleccionadoId}
+          onClick={() => onCrearPresupuestoInicial?.()}
+          disabled={creandoPresupuestoInicial || !!presupuestoSeleccionadoId || !actaListaParaPresupuesto || typeof onCrearPresupuestoInicial !== 'function'}
           style={{
             width: '100%',
             border: '1.5px solid rgba(169,130,37,0.35)',
@@ -114,8 +124,8 @@ export default function Section5_TrabajoSolicitado({
             fontSize: 13,
             fontWeight: 800,
             fontFamily: 'inherit',
-            cursor: creandoPresupuestoInicial || presupuestoSeleccionadoId ? 'default' : 'pointer',
-            opacity: creandoPresupuestoInicial || presupuestoSeleccionadoId ? 0.65 : 1,
+            cursor: creandoPresupuestoInicial || presupuestoSeleccionadoId || !actaListaParaPresupuesto ? 'default' : 'pointer',
+            opacity: creandoPresupuestoInicial || presupuestoSeleccionadoId || !actaListaParaPresupuesto ? 0.65 : 1,
             marginBottom: 12,
           }}
         >
@@ -158,9 +168,9 @@ export default function Section5_TrabajoSolicitado({
                       </p>
                       <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>
                         COT-{cot.numero_cotizacion}
-                        {veh.patente ? ` Â· ${veh.patente}` : ''}
-                        {veh.marca || veh.modelo ? ` Â· ${[veh.marca, veh.modelo].filter(Boolean).join(' ')}` : ''}
-                        {cli.nombre ? ` Â· ${cli.nombre}` : ''}
+                        {veh.patente ? ` \u00b7 ${veh.patente}` : ''}
+                        {veh.marca || veh.modelo ? ` \u00b7 ${[veh.marca, veh.modelo].filter(Boolean).join(' ')}` : ''}
+                        {cli.nombre ? ` \u00b7 ${cli.nombre}` : ''}
                       </p>
                     </div>
                     <span style={{ color: '#a98225', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
@@ -177,7 +187,7 @@ export default function Section5_TrabajoSolicitado({
       {/* Sugerencias */}
       <div className="s-card" style={{ marginBottom: 16 }}>
         <p style={{ color: '#6B6B6B', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 0, marginBottom: 14 }}>
-          Agregar rÃ¡pido
+          Agregar rápido
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {SUGERENCIAS.map((s) => (

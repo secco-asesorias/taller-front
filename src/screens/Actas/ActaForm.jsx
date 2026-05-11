@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { FormProvider, useForm } from '../../context/FormContext'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FormProvider, mergeActaIntoInitialForm, useForm } from '../../context/FormContext'
 import ProgressBar from '../../components/common/ProgressBar'
 import Section1_Cliente from '../../components/sections/Section1_Cliente'
 import Section2_Vehiculo from '../../components/sections/Section2_Vehiculo'
@@ -10,9 +10,20 @@ import Section6_FirmaCliente from '../../components/sections/Section6_FirmaClien
 import Section7_RecepcionSECCO from '../../components/sections/Section7_RecepcionSECCO'
 import Section8_Checklist from '../../components/sections/Section8_Checklist'
 import { actaService } from '../../services/actaService'
+import { cotizacionService } from '../../services/cotizacionService'
 import { generarPDFActa } from '../../utils/pdf'
 import { useToast } from '../../components/common/ToastProvider'
-import { validarSeccion1, validarSeccion2 } from '../../utils/validation'
+import { extDesdeMime, fileToBase64DataPart } from '../../utils/fotoActa'
+import {
+  validarSeccion1,
+  validarSeccion2,
+  validarSeccion3,
+  validarSeccion4,
+  validarSeccion5,
+  validarSeccion6,
+  validarSeccion7,
+} from '../../utils/validation'
+import { supabase } from '../../services/api'
 
 /** Marca/modelo “PENDIENTE” u otros marcadores: el vehículo aún no está capturado de verdad. */
 function textoEsPendientePlaceholder(val) {
@@ -21,25 +32,39 @@ function textoEsPendientePlaceholder(val) {
   return ['PENDIENTE', 'PEND.', 'N/A', 'NA', 'SIN DATO', 'SIN_DATO', 'SIN INFO', '—', '-'].includes(t)
 }
 
-/** Snapshot alineado con FormContext + respuesta GET /api/actas/:id (sin depender del estado React recién actualizado). */
-function datosSnapshotDesdeActaApi(acta) {
-  const c = acta?.clientes
-  const v = acta?.vehiculos
-  return {
-    acta_id: acta?.id ?? null,
-    cliente_id: acta?.cliente_id ?? c?.id ?? null,
-    vehiculo_id: acta?.vehiculo_id ?? v?.id ?? null,
-    nombre: c?.nombre ?? '',
-    rut: c?.rut ?? '',
-    telefono: c?.telefono ?? '',
-    email: c?.email ?? '',
-    marca: v?.marca ?? '',
-    modelo: v?.modelo ?? '',
-    anio: v?.anio ?? '',
-    patente: v?.patente ?? '',
-    vin: v?.vin ?? '',
-    color: v?.color ?? '',
+function parseStoragePublicUrl(url) {
+  // Ej: https://<proj>.supabase.co/storage/v1/object/public/<bucket>/<path>
+  try {
+    const u = new URL(url)
+    const m = u.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/)
+    if (!m) return null
+    return { bucket: m[1], path: decodeURIComponent(m[2]) }
+  } catch {
+    return null
   }
+}
+
+async function firmarFotosActaSiCorresponde(acta) {
+  const fotos = Array.isArray(acta?.fotos_acta) ? acta.fotos_acta : []
+  if (!fotos.length) return acta
+
+  // Si el bucket es privado o hay restricciones, un signed URL permite verla en <img>.
+  const signed = await Promise.all(fotos.map(async (f) => {
+    const url = String(f?.url || '')
+    const parsed = parseStoragePublicUrl(url)
+    if (!parsed?.bucket || !parsed?.path) return f
+    try {
+      const { data, error } = await supabase.storage
+        .from(parsed.bucket)
+        .createSignedUrl(parsed.path, 60 * 60) // 1h
+      if (error || !data?.signedUrl) return f
+      return { ...f, url: data.signedUrl }
+    } catch {
+      return f
+    }
+  }))
+
+  return { ...acta, fotos_acta: signed }
 }
 
 // ── Pantalla de éxito ──────────────────────────────────────────
@@ -98,14 +123,30 @@ function ActaFormInner({ onVolver, initialActa }) {
   const toast = useToast()
   const { formData, updateForm, resetForm, cargarDesdeActa } = useForm()
   const [seccion, setSeccion] = useState(1)
+  /** Permite volver a pasos ya visitados sin saltar a pasos no alcanzados aún. */
+  const [maxSeccionVisitada, setMaxSeccionVisitada] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [actaGuardada, setActaGuardada] = useState(false)
   const [saveState, setSaveState] = useState({ state: 'idle', message: '' }) // idle | saving | saved | error
   const lastSavedHashRef = useRef('')
+  const [presupuestosSinAsignar, setPresupuestosSinAsignar] = useState([])
+  const [cargandoPresupuestos, setCargandoPresupuestos] = useState(false)
+  const [asignandoPresupuesto, setAsignandoPresupuesto] = useState(null)
+  const [creandoPresupuestoInicial, setCreandoPresupuestoInicial] = useState(false)
 
   function scrollTop() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    setMaxSeccionVisitada((m) => Math.max(m, seccion))
+  }, [seccion])
+
+  function irASeccion(n) {
+    if (n < 1 || n > 8 || n > maxSeccionVisitada || n === seccion) return
+    setSeccion(n)
+    scrollTop()
   }
 
   function buildBorradorPayload() {
@@ -212,30 +253,104 @@ function ActaFormInner({ onVolver, initialActa }) {
     formData.fecha_firma_secco,
   ])
 
+  /** @returns {Promise<{ actaId: string|null, numeroActa?: number|null }|null>} */
   async function guardarBorrador({ force = false } = {}) {
     // No guardar mientras estamos cerrando/guardando final
-    if (loading) return
+    if (loading) return null
     // Evitar guardar borrador vacío
     const tieneAlgo = !!(formData.nombre || formData.rut || formData.patente || formData.acta_id)
-    if (!tieneAlgo) return
+    if (!tieneAlgo) return null
 
-    if (!force && borradorHash === lastSavedHashRef.current) return
+    if (!force && borradorHash === lastSavedHashRef.current) {
+      return { actaId: formData.acta_id || null, numeroActa: formData.numero_acta ?? null }
+    }
 
     setSaveState({ state: 'saving', message: 'Guardando…' })
     try {
       const payload = JSON.parse(borradorHash)
       const saved = await actaService.guardarBorrador(payload)
+      const actaRow = saved?.acta ?? saved
+      const actaIdFromSave = actaRow?.id ?? null
+      const numeroFromSave = actaRow?.numero_acta ?? null
 
-      // Si backend devuelve IDs, persistirlos en el form.
-      if (saved?.id && !formData.acta_id) updateForm({ acta_id: saved.id })
-      if (saved?.numero_acta && !formData.numero_acta) updateForm({ numero_acta: saved.numero_acta })
-      if (saved?.cliente_id && !formData.cliente_id) updateForm({ cliente_id: saved.cliente_id })
-      if (saved?.vehiculo_id && !formData.vehiculo_id) updateForm({ vehiculo_id: saved.vehiculo_id })
+      // Si backend devuelve IDs, persistirlos en el form (la API devuelve `{ acta, cliente, vehiculo }`).
+      if (actaIdFromSave && !formData.acta_id) updateForm({ acta_id: actaIdFromSave })
+      if (numeroFromSave != null && !formData.numero_acta) updateForm({ numero_acta: numeroFromSave })
+      if (saved?.cliente?.id && !formData.cliente_id) updateForm({ cliente_id: saved.cliente.id })
+      if (saved?.vehiculo?.id && !formData.vehiculo_id) updateForm({ vehiculo_id: saved.vehiculo.id })
 
       lastSavedHashRef.current = borradorHash
       setSaveState({ state: 'saved', message: 'Guardado' })
+      return {
+        actaId: actaIdFromSave || formData.acta_id || null,
+        numeroActa: numeroFromSave ?? formData.numero_acta ?? null,
+      }
     } catch (e) {
       setSaveState({ state: 'error', message: e?.message ? `No guardado: ${e.message}` : 'No se pudo guardar' })
+      return null
+    }
+  }
+
+  const cargarPresupuestosSinAsignar = useCallback(async () => {
+    setCargandoPresupuestos(true)
+    try {
+      const rows = await cotizacionService.listar({ limite: 80 })
+      const list = Array.isArray(rows) ? rows : []
+      const sin = list.filter(
+        (c) =>
+          !c.acta_id &&
+          ['borrador', 'lista', 'enviada'].includes(String(c.status || '').toLowerCase())
+      )
+      setPresupuestosSinAsignar(sin)
+    } catch {
+      setPresupuestosSinAsignar([])
+    } finally {
+      setCargandoPresupuestos(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (seccion !== 5) return
+    cargarPresupuestosSinAsignar()
+  }, [seccion, cargarPresupuestosSinAsignar])
+
+  async function handleCrearPresupuestoInicial() {
+    setCreandoPresupuestoInicial(true)
+    try {
+      const r = await guardarBorrador({ force: true })
+      const actaId = r?.actaId
+      if (!actaId) {
+        toast.error('No hay borrador de acta guardado todavía. Completá cliente, vehículo e ingreso y esperá «Guardado».')
+        return
+      }
+      const cot = await cotizacionService.crearInicialDesdeActa(actaId)
+      if (cot?.id) updateForm({ presupuesto_inicial_id: cot.id })
+      toast.success('Presupuesto inicial creado y vinculado a esta acta.')
+      await cargarPresupuestosSinAsignar()
+    } catch (e) {
+      toast.error(e?.message ? String(e.message) : 'No se pudo crear el presupuesto')
+    } finally {
+      setCreandoPresupuestoInicial(false)
+    }
+  }
+
+  async function handleAsignarPresupuesto(cotId) {
+    setAsignandoPresupuesto(cotId)
+    try {
+      const r = await guardarBorrador({ force: true })
+      const actaId = r?.actaId
+      if (!actaId) {
+        toast.error('Primero debe existir un borrador de acta guardado.')
+        return
+      }
+      await cotizacionService.actualizar(cotId, { acta_id: actaId })
+      updateForm({ presupuesto_inicial_id: cotId })
+      toast.success('Presupuesto asignado a esta acta.')
+      setPresupuestosSinAsignar((prev) => prev.filter((c) => c.id !== cotId))
+    } catch (e) {
+      toast.error(e?.message ? String(e.message) : 'No se pudo asignar el presupuesto')
+    } finally {
+      setAsignandoPresupuesto(null)
     }
   }
 
@@ -252,10 +367,8 @@ function ActaFormInner({ onVolver, initialActa }) {
   }
 
   function calcularSeccionInicialDesdeForm(datos) {
-    // Conservador: solo “salta” Cliente/Vehículo cuando los datos ya están completos.
-    // No intentamos saltar secciones con fotos/checklists porque dependen de archivos/estado local.
     const e1 = validarSeccion1(datos)
-    const clienteOk = (datos.cliente_id && Object.keys(e1).length === 0)
+    const clienteOk = datos.cliente_id && Object.keys(e1).length === 0
     if (!clienteOk) return 1
 
     const e2 = validarSeccion2(datos)
@@ -265,7 +378,12 @@ function ActaFormInner({ onVolver, initialActa }) {
       datos.vehiculo_id && Object.keys(e2).length === 0 && !vehiculoPlaceholder
     if (!vehiculoOk) return 2
 
-    return 3
+    if (Object.keys(validarSeccion3(datos)).length) return 3
+    if (Object.keys(validarSeccion4(datos)).length) return 4
+    if (Object.keys(validarSeccion5(datos)).length) return 5
+    if (Object.keys(validarSeccion6(datos)).length) return 6
+    if (Object.keys(validarSeccion7(datos)).length) return 7
+    return 8
   }
 
   // Cargar acta inicial (modo edición desde detalle)
@@ -276,17 +394,20 @@ function ActaFormInner({ onVolver, initialActa }) {
     setSaveState({ state: 'saving', message: 'Sincronizando…' })
     actaService.obtener(initialActa.id)
       .then((full) => {
-        cargarDesdeActa(full)
-        setSaveState({ state: 'saved', message: 'Acta cargada' })
-        const snapshot = datosSnapshotDesdeActaApi(full)
-        setSeccion(calcularSeccionInicialDesdeForm(snapshot))
+        return firmarFotosActaSiCorresponde(full)
+          .then((fullSigned) => {
+            cargarDesdeActa(fullSigned)
+            setSaveState({ state: 'saved', message: 'Acta cargada' })
+            const datos = mergeActaIntoInitialForm(fullSigned)
+            setSeccion(calcularSeccionInicialDesdeForm(datos))
+          })
       })
       .catch(() => {
         // Fallback: al menos cargar lo que venía en `initialActa`.
         cargarDesdeActa(initialActa)
         setSaveState({ state: 'saved', message: 'Acta cargada' })
-        const snapshot = datosSnapshotDesdeActaApi(initialActa)
-        setSeccion(calcularSeccionInicialDesdeForm(snapshot))
+        const datos = mergeActaIntoInitialForm(initialActa)
+        setSeccion(calcularSeccionInicialDesdeForm(datos))
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialActa?.id])
@@ -297,37 +418,54 @@ function ActaFormInner({ onVolver, initialActa }) {
 
     // Foto km
     if (formData.foto_km instanceof File) {
-      const reader = new FileReader()
-      await new Promise((res) => { reader.onload = res; reader.readAsDataURL(formData.foto_km) })
-      const base64 = reader.result.split(',')[1]
-      await actaService.subirFoto(actaId, 'km', base64, formData.foto_km.type || 'image/jpeg', 'jpg').catch(() => {})
+      const base64 = await fileToBase64DataPart(formData.foto_km)
+      const mime = formData.foto_km.type || 'image/jpeg'
+      await actaService.subirFoto(actaId, 'km', base64, mime, extDesdeMime(mime)).catch(() => {})
     }
 
     // Foto combustible
     if (formData.foto_combustible instanceof File) {
-      const reader = new FileReader()
-      await new Promise((res) => { reader.onload = res; reader.readAsDataURL(formData.foto_combustible) })
-      const base64 = reader.result.split(',')[1]
-      await actaService.subirFoto(actaId, 'combustible', base64, formData.foto_combustible.type || 'image/jpeg', 'jpg').catch(() => {})
+      const base64 = await fileToBase64DataPart(formData.foto_combustible)
+      const mime = formData.foto_combustible.type || 'image/jpeg'
+      await actaService.subirFoto(actaId, 'combustible', base64, mime, extDesdeMime(mime)).catch(() => {})
     }
 
     // Fotos exteriores single
     for (const key of singleKeys) {
       const file = fotos[`${key}_file`]
       if (file instanceof File) {
-        const reader = new FileReader()
-        await new Promise((res) => { reader.onload = res; reader.readAsDataURL(file) })
-        const base64 = reader.result.split(',')[1]
-        await actaService.subirFoto(actaId, key, base64, file.type || 'image/jpeg', 'jpg').catch(() => {})
+        const base64 = await fileToBase64DataPart(file)
+        const mime = file.type || 'image/jpeg'
+        await actaService.subirFoto(actaId, key, base64, mime, extDesdeMime(mime)).catch(() => {})
+      }
+    }
+
+    // Interior (array de { file?, preview, ... })
+    const interiorItems = Array.isArray(fotos.interior) ? fotos.interior : (fotos.interior ? [fotos.interior] : [])
+    for (const item of interiorItems) {
+      if (item?.file instanceof File) {
+        const base64 = await fileToBase64DataPart(item.file)
+        const mime = item.file.type || 'image/jpeg'
+        await actaService.subirFoto(actaId, 'interior', base64, mime, extDesdeMime(mime)).catch(() => {})
+      }
+    }
+
+    // Daños adicionales (opcional) — el backend debe aceptar `tipo: "danos"` (o ajustar al contrato real).
+    const danosItems = Array.isArray(fotos.danos) ? fotos.danos : []
+    for (const item of danosItems) {
+      if (item?.file instanceof File) {
+        const base64 = await fileToBase64DataPart(item.file)
+        const mime = item.file.type || 'image/jpeg'
+        await actaService.subirFoto(actaId, 'danos', base64, mime, extDesdeMime(mime)).catch(() => {})
       }
     }
 
     // Firmas (base64 ya listas)
-    if (formData.firma_cliente) {
+    if (formData.firma_cliente && String(formData.firma_cliente).startsWith('data:')) {
       const base64 = formData.firma_cliente.split(',')[1] || formData.firma_cliente
       await actaService.subirFoto(actaId, 'firma_cliente', base64, 'image/png', 'png').catch(() => {})
     }
-    if (formData.firma_secco) {
+    if (formData.firma_secco && String(formData.firma_secco).startsWith('data:')) {
       const base64 = formData.firma_secco.split(',')[1] || formData.firma_secco
       await actaService.subirFoto(actaId, 'firma_secco', base64, 'image/png', 'png').catch(() => {})
     }
@@ -475,7 +613,11 @@ function ActaFormInner({ onVolver, initialActa }) {
       </div>
 
       <div className="acta-progressWrap">
-        <ProgressBar seccionActual={seccion} />
+        <ProgressBar
+          seccionActual={seccion}
+          maxSeccionAlcanzada={maxSeccionVisitada}
+          onIrASeccion={irASeccion}
+        />
       </div>
 
       <div className="acta-stage">
@@ -487,6 +629,13 @@ function ActaFormInner({ onVolver, initialActa }) {
           <Section5_TrabajoSolicitado
             onNext={next}
             onBack={back}
+            presupuestosSinAsignar={presupuestosSinAsignar}
+            cargandoPresupuestos={cargandoPresupuestos}
+            asignandoPresupuesto={asignandoPresupuesto}
+            presupuestoSeleccionadoId={formData.presupuesto_inicial_id}
+            onAsignarPresupuesto={handleAsignarPresupuesto}
+            creandoPresupuestoInicial={creandoPresupuestoInicial}
+            onCrearPresupuestoInicial={handleCrearPresupuestoInicial}
           />
         )}
         {seccion === 6 && <Section6_FirmaCliente onNext={next} onBack={back} />}

@@ -1,4 +1,5 @@
 const NIVELES = [
+  { value: 'pendiente', label: 'Pendiente', pct: 0 },
   { value: 'vacio', label: 'Vacío', pct: 0 },
   { value: '1/4',  label: '¼',    pct: 25 },
   { value: '1/2',  label: '½',    pct: 50 },
@@ -11,7 +12,7 @@ export default function FuelSelector({ value, onChange }) {
 
   return (
     <div style={{ width: '100%' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
         {NIVELES.map((n) => {
           const active = value === n.value
           return (
