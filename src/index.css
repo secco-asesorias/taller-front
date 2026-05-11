@@ -1,0 +1,195 @@
+@import "tailwindcss";
+
+/* ── Keyframes ──────────────────────────────────────────────── */
+@keyframes seccion-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes check-pop {
+  0%   { transform: scale(0.4); opacity: 0; }
+  70%  { transform: scale(1.15); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Clases de animación ──────────────────────────────────────── */
+.section-enter {
+  animation: seccion-in 220ms ease both;
+}
+
+.check-animate {
+  animation: check-pop 180ms ease both;
+}
+
+.fade-in {
+  animation: fade-in 300ms ease both;
+}
+
+/* ── Base ─────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    margin: 0;
+    background-color: #FFFFFF;
+    color: #111114;
+    font-family: system-ui, -apple-system, "SF Pro Display", Inter, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100svh;
+  }
+
+  input, select, textarea {
+    color-scheme: light;
+    font-family: inherit;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #FFFFFF; }
+  ::-webkit-scrollbar-thumb { background: #E0E0E0; border-radius: 2px; }
+}
+
+/* ── Variables reutilizables ──────────────────────────────────── */
+:root {
+  --bg:      #FFFFFF;
+  --surface: #F5F5F5;
+  --border:  #E0E0E0;
+  --gold:    #a98225;
+  --muted:   #6B6B6B;
+  --danger:  #FF453A;
+  --success: #a98225;
+}
+
+/* ── Utilidades globales de componentes ───────────────────────── */
+.s-input {
+  width: 100%;
+  background: #FFFFFF;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  color: #111114;
+  font-size: 17px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 150ms ease;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.s-input:focus {
+  border-color: var(--gold);
+}
+.s-input::placeholder {
+  color: #AAAAAA;
+}
+.s-input-err {
+  border-color: var(--danger) !important;
+}
+
+.s-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.s-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.s-btn-primary {
+  width: 100%;
+  background: var(--gold);
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 16px;
+  border: none;
+  border-radius: 12px;
+  height: 52px;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+  font-family: inherit;
+}
+.s-btn-primary:active { opacity: 0.8; }
+.s-btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.s-btn-secondary {
+  width: 100%;
+  background: transparent;
+  color: var(--gold);
+  font-weight: 600;
+  font-size: 16px;
+  border: 1.5px solid var(--gold);
+  border-radius: 12px;
+  height: 52px;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+  font-family: inherit;
+}
+.s-btn-secondary:active  { opacity: 0.7; }
+.s-btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.s-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* ── Checkbox personalizado ───────────────────────────────────── */
+.s-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: #FFFFFF;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 120ms, border-color 120ms;
+}
+.s-checkbox:checked {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.s-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 2px;
+  width: 8px;
+  height: 13px;
+  border: 2px solid #FFFFFF;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
+}
+
+/* ── Separador sección ────────────────────────────────────────── */
+.s-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0 20px;
+}
