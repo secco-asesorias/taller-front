@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { unwrapApiList } from '../../lib/unwrapApiList'
 import { cotizacionService } from '../../services/cotizacionService'
+
+const LIMITE_LISTA = 50
 
 const STATUS_LABEL = {
   borrador: 'Borrador',
@@ -10,7 +13,12 @@ const STATUS_LABEL = {
   sin_asignar: 'Sin asignar',
 }
 
+function statusKey(s) {
+  return String(s || '').toLowerCase()
+}
+
 function statusStyle(status) {
+  const k = statusKey(status)
   const map = {
     borrador: { background: 'rgba(107,107,107,0.10)', color: '#6B6B6B', border: '1px solid #E0E0E0' },
     lista: { background: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' },
@@ -19,7 +27,7 @@ function statusStyle(status) {
     rechazada: { background: 'rgba(255,69,58,0.08)', color: '#FF453A', border: '1px solid rgba(255,69,58,0.25)' },
     sin_asignar: { background: '#F5F5F5', color: '#6B6B6B', border: '1px solid #E0E0E0' },
   }
-  return map[status] || map.borrador
+  return map[k] || map.borrador
 }
 
 function money(v) {
@@ -29,67 +37,109 @@ function money(v) {
 export default function CotizacionesListScreen({ onNavigate }) {
   const [cotizaciones, setCotizaciones] = useState([])
   const [loading, setLoading] = useState(true)
+  const [filtro, setFiltro] = useState('')
+  const [filtroDebounced, setFiltroDebounced] = useState('')
+  const [refreshNonce, setRefreshNonce] = useState(0)
   const [error, setError] = useState('')
 
-  const cargar = useCallback(() => {
-    setLoading(true)
-    setError('')
-    cotizacionService
-      .listar({ limite: 50 })
-      .then((rows) => {
-        setCotizaciones(Array.isArray(rows) ? rows : [])
-      })
-      .catch((err) => {
-        setCotizaciones([])
-        setError(err.message || 'Error al cargar cotizaciones')
-      })
-      .finally(() => setLoading(false))
-  }, [])
+  useEffect(() => {
+    const trimmed = filtro.trim()
+    if (!trimmed) {
+      setFiltroDebounced('')
+      return
+    }
+    const t = setTimeout(() => setFiltroDebounced(trimmed), 350)
+    return () => clearTimeout(t)
+  }, [filtro])
 
   useEffect(() => {
-    cargar()
-  }, [cargar])
+    let cancelled = false
+    setLoading(true)
+    setError('')
+
+    const req = filtroDebounced
+      ? cotizacionService.buscarPorPatente(filtroDebounced, { limite: LIMITE_LISTA })
+      : cotizacionService.listar({ limite: LIMITE_LISTA })
+
+    req
+      .then((data) => {
+        if (cancelled) return
+        setCotizaciones(unwrapApiList(data, ['cotizaciones']))
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setCotizaciones([])
+          setError(err?.message || 'Error al cargar cotizaciones')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [filtroDebounced, refreshNonce])
+
+  const refrescarLista = () => setRefreshNonce((n) => n + 1)
+  const mostrarSpinnerCompleto = loading && !cotizaciones.length
 
   return (
-    <div style={{ padding: '24px 16px 40px', maxWidth: 720, margin: '0 auto' }}>
-      <div
-        className="s-card"
-        style={{
-          marginBottom: 20,
-          padding: 18,
-          borderRadius: 14,
-          border: '1px solid #E8E8E8',
-          background: '#FFFFFF',
-        }}
-      >
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 700, margin: '0 0 8px' }}>Cotizaciones</h2>
-        <p style={{ color: '#6B6B6B', fontSize: 14, margin: '0 0 16px', lineHeight: 1.5 }}>
-          Acá ves los presupuestos recientes. Para armar uno desde cero abrís el mismo editor de siempre; recién al guardar o al cambiar de estado se crea el registro en el servidor.
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-          <button
-            type="button"
-            className="s-btn-primary"
-            onClick={() => onNavigate?.('cotizaciones/nueva')}
-            style={{ minWidth: 200 }}
-          >
-            + Nuevo presupuesto
+    <div style={{ padding: '14px 12px 40px', maxWidth: 1040, margin: '0 auto' }}>
+      <style>{`
+        .cot-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+        .cot-actions { display: inline-flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 6px; flex-shrink: 0; }
+        .cot-action-btn { padding: 7px 12px !important; font-size: 12px !important; font-weight: 700 !important; line-height: 1.2 !important; border-radius: 10px !important; white-space: nowrap; min-height: 0 !important; height: auto !important; }
+        @media (max-width: 380px) {
+          .cot-actions { flex-wrap: wrap; max-width: 100%; }
+        }
+        .cot-searchWrap { position: relative; margin-bottom: 14px; }
+        .cot-searchIcon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #AAAAAA; font-size: 14px; pointer-events: none; }
+        .cot-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        @media (min-width: 720px) {
+          .cot-grid { grid-template-columns: 1fr 1fr; }
+        }
+      `}</style>
+
+      <div className="cot-toolbar">
+        <div style={{ minWidth: 0 }}>
+          <h2 style={{ color: '#111114', fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.3px' }}>Cotizaciones</h2>
+          <p style={{ margin: '6px 0 0', color: '#6B6B6B', fontSize: 13, lineHeight: 1.45, maxWidth: 520 }}>
+            Presupuestos del taller. Puedes buscar por patente o revisar los últimos cargados.
+          </p>
+          <p style={{ margin: '8px 0 0', color: '#111114', fontSize: 12, fontWeight: 600 }}>
+            {loading ? 'Cargando…' : `${cotizaciones.length} resultado${cotizaciones.length === 1 ? '' : 's'}`}
+            {loading && cotizaciones.length > 0 ? ' · actualizando' : ''}
+          </p>
+        </div>
+        <div className="cot-actions">
+          <button type="button" className="s-btn-primary cot-action-btn" onClick={() => onNavigate?.('cotizaciones/nueva')}>
+            + Nuevo
           </button>
-          <button type="button" className="s-btn-secondary" onClick={() => onNavigate?.('actas')}>
-            Ir a actas
+          <button type="button" className="s-btn-secondary cot-action-btn" onClick={() => onNavigate?.('actas')}>
+            Actas
           </button>
-          <button
-            type="button"
-            className="s-btn-secondary"
-            onClick={cargar}
-            disabled={loading}
-            style={{ marginLeft: 'auto' }}
-          >
-            {loading ? 'Actualizando…' : 'Actualizar lista'}
+          <button type="button" className="s-btn-secondary cot-action-btn" onClick={refrescarLista} disabled={loading} title={loading ? 'Actualizando…' : 'Recargar listado'}>
+            Actualizar
           </button>
         </div>
-        <p style={{ color: '#AAAAAA', fontSize: 12, margin: '14px 0 0', lineHeight: 1.45 }}>
-          También puedes generar un <strong>presupuesto inicial</strong> vinculado al acta desde el paso «Trabajo solicitado» del formulario de acta.
+      </div>
+
+      <div className="s-card" style={{ padding: 14, marginBottom: 14, borderRadius: 14 }}>
+        <div className="cot-searchWrap">
+          <span className="cot-searchIcon">⌕</span>
+          <input
+            type="text"
+            className="s-input"
+            placeholder="Buscar por patente…"
+            value={filtro}
+            onChange={(e) => setFiltro(e.target.value)}
+            autoComplete="off"
+            style={{ width: '100%', paddingLeft: 36 }}
+          />
+        </div>
+        <p style={{ color: '#AAAAAA', fontSize: 12, margin: 0, lineHeight: 1.45 }}>
+          Presupuesto inicial vinculado al acta: paso «Trabajo solicitado» del formulario de acta. El borrador en servidor se crea al guardar o al cambiar de estado.
         </p>
       </div>
 
@@ -97,28 +147,26 @@ export default function CotizacionesListScreen({ onNavigate }) {
         <div
           className="s-card"
           style={{
-            marginBottom: 16,
+            marginBottom: 14,
             padding: 14,
             borderRadius: 12,
             border: '1px solid rgba(255,69,58,0.35)',
             background: 'rgba(255,69,58,0.06)',
           }}
         >
-          <p className="s-error" style={{ margin: 0 }}>
-            {error}
-          </p>
+          <p className="s-error" style={{ margin: 0 }}>{error}</p>
           <p style={{ color: '#6B6B6B', fontSize: 13, margin: '10px 0 0' }}>
-            Revisá la sesión y la API. Igual puedes intentar crear un presupuesto nuevo con el botón de arriba.
+            Revisá la sesión y la API. Podés intentar de nuevo o crear un presupuesto nuevo.
           </p>
         </div>
       )}
 
-      {loading && !cotizaciones.length ? (
-        <div className="s-card" style={{ padding: 28, textAlign: 'center', borderRadius: 14 }}>
+      {mostrarSpinnerCompleto ? (
+        <div className="s-card" style={{ padding: 36, textAlign: 'center', borderRadius: 14 }}>
           <p style={{ color: '#6B6B6B', fontSize: 14, margin: 0 }}>Cargando cotizaciones…</p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="cot-grid">
           {cotizaciones.map((cot) => {
             const veh = cot.vehiculos || cot.actas?.vehiculos || cot.vista_cliente?.vehiculo_manual || {}
             const cli = cot.clientes || cot.actas?.clientes || cot.vista_cliente?.cliente_manual || {}
@@ -137,20 +185,28 @@ export default function CotizacionesListScreen({ onNavigate }) {
                   background: '#FFFFFF',
                   fontFamily: 'inherit',
                   width: '100%',
+                  minHeight: 120,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <p style={{ margin: '0 0 2px', color: '#1e3a8a', fontSize: 15, fontWeight: 700 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flex: 1 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ margin: '0 0 4px', color: '#1e3a8a', fontSize: 14, fontWeight: 800 }}>
                       COT-{cot.numero_cotizacion}
-                      {cot.vista_cliente?.titulo && ` · ${cot.vista_cliente.titulo}`}
+                      {cot.vista_cliente?.titulo && (
+                        <span style={{ color: '#6B6B6B', fontWeight: 600 }}> · {cot.vista_cliente.titulo}</span>
+                      )}
                     </p>
-                    <p style={{ margin: '0 0 2px', color: '#111114', fontSize: 13 }}>
+                    <p style={{ margin: '0 0 4px', color: '#111114', fontSize: 13, lineHeight: 1.35 }}>
                       {[veh.marca, veh.modelo, veh.patente].filter(Boolean).join(' · ') || 'Sin vehículo en datos'}
                     </p>
-                    {cli.nombre && <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>{cli.nombre}</p>}
+                    {cli.nombre ? (
+                      <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>{cli.nombre}</p>
+                    ) : null}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
                     <span
                       style={{
                         fontSize: 11,
@@ -161,13 +217,13 @@ export default function CotizacionesListScreen({ onNavigate }) {
                         ...statusStyle(cot.status),
                       }}
                     >
-                      {STATUS_LABEL[cot.status] || cot.status}
+                      {STATUS_LABEL[statusKey(cot.status)] || cot.status}
                     </span>
-                    {(cot.total || cot.total_final_cliente) && (
-                      <span style={{ fontSize: 12, fontWeight: 700, color: '#a98225' }}>
+                    {(cot.total || cot.total_final_cliente) ? (
+                      <span style={{ fontSize: 13, fontWeight: 800, color: '#a98225' }}>
                         {money(cot.total_final_cliente || cot.total)}
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </button>
@@ -178,25 +234,23 @@ export default function CotizacionesListScreen({ onNavigate }) {
             <div
               className="s-card"
               style={{
-                padding: 36,
+                gridColumn: '1 / -1',
+                padding: 40,
                 textAlign: 'center',
                 borderRadius: 14,
                 border: '1px dashed #D0D0D0',
                 background: '#FAFAFA',
               }}
             >
-              <p style={{ fontSize: 36, margin: '0 0 12px' }}>📄</p>
-              <p style={{ color: '#111114', fontSize: 16, fontWeight: 600, margin: '0 0 8px' }}>
-                Todavía no hay cotizaciones en el listado
+              <p style={{ color: '#111114', fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>
+                {filtroDebounced ? 'No hay cotizaciones para esa patente' : 'No hay cotizaciones en el listado'}
               </p>
               <p style={{ color: '#6B6B6B', fontSize: 14, margin: '0 0 20px', lineHeight: 1.5 }}>
-                Abrí el editor para cargar ítems, mano de obra y totales. El borrador en servidor se crea cuando guardás o enviás.
+                {filtroDebounced
+                  ? 'Prueba con otra patente o limpia el buscador para ver los últimos registros.'
+                  : 'Abre el editor para cargar ítems y totales, o genera un presupuesto desde una acta.'}
               </p>
-              <button
-                type="button"
-                className="s-btn-primary"
-                onClick={() => onNavigate?.('cotizaciones/nueva')}
-              >
+              <button type="button" className="s-btn-primary" onClick={() => onNavigate?.('cotizaciones/nueva')}>
                 + Nuevo presupuesto
               </button>
             </div>
