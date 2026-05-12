@@ -20,4 +20,5 @@ export const cotizacionService = {
   actualizar: (id, datos) => api.put(`/api/cotizaciones/${id}`, datos),
   aprobar: (id) => api.patch(`/api/cotizaciones/${id}/aprobar`, {}),
   rechazar: (id, motivo = '') => api.patch(`/api/cotizaciones/${id}/rechazar`, { motivo }),
+  eliminar: (id) => api.delete(`/api/cotizaciones/${id}`),
 };
