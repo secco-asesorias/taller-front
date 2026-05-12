@@ -1,201 +1,277 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AuthProvider, useAuth, useRol } from './context/AuthContext'
 import { DiagnosticoProvider } from './context/DiagnosticoContext'
-import { supabase } from './services/api'
+import AppShell from './components/layout/AppShell'
+import { ToastProvider } from './components/common/ToastProvider'
+import { ConfirmProvider } from './components/common/ConfirmProvider'
 
 // Screens
 import LoginScreen from './screens/Login/LoginScreen'
 import AdminDashboard from './screens/Dashboard/AdminDashboard'
-import RecepcionistaDashboard from './screens/Dashboard/RecepcionistaDashboard'
-import TecnicoDashboard from './screens/Dashboard/TecnicoDashboard'
 import ActasListScreen from './screens/Actas/ActasListScreen'
 import ActaForm from './screens/Actas/ActaForm'
 import ActaDetalleScreen from './screens/Actas/ActaDetalleScreen'
+import { actaService } from './services/actaService'
 import DiagnosticosListScreen from './screens/Diagnostico/DiagnosticosListScreen'
 import DiagnosticoForm from './screens/Diagnostico/DiagnosticoForm'
 import CotizacionesListScreen from './screens/Cotizaciones/CotizacionesListScreen'
-import PresupuestoForm from './screens/Cotizaciones/PresupuestoForm'
+import PresupuestoForm, { nuevaCotizacionPlantilla } from './screens/Cotizaciones/PresupuestoForm'
 import OTListScreen from './screens/OrdenesTrabajo/OTListScreen'
 import OTForm from './screens/OrdenesTrabajo/OTForm'
 import ClientesListScreen from './screens/Clientes/ClientesListScreen'
 
-// ── DashboardScreen: elige el dashboard según rol ─────────────
-function DashboardScreen({ onNavigate }) {
-  const { esAdmin, esTecnico, esRecepcionista } = useRol()
-  if (esAdmin) return <AdminDashboard onNavigate={onNavigate} />
-  if (esTecnico) return <TecnicoDashboard onNavigate={onNavigate} />
-  if (esRecepcionista) return <RecepcionistaDashboard onNavigate={onNavigate} />
-  return <AdminDashboard onNavigate={onNavigate} />
+function useLegacyNavigate() {
+  const navigate = useNavigate()
+  return (r, _params = {}) => {
+    if (!r) return
+    const path = String(r).startsWith('/') ? String(r) : `/${r}`
+    navigate(path.replaceAll('//', '/'))
+  }
 }
 
-// ── AppContent: navegación interna ────────────────────────────
-function AppContent() {
-  const { cargando } = useAuth()
-  const { nombre } = useRol()
-  const [ruta, setRuta] = useState('dashboard')
-  const [params, setParams] = useState({})
-  const [diagnosticoActivo, setDiagnosticoActivo] = useState(null)
-  const [cotizacionActiva, setCotizacionActiva] = useState(null)
-  const [otActiva, setOtActiva] = useState(null)
+function DashboardRoute() {
+  const { rol } = useRol()
+  // Por ahora el dashboard “persistente” es el AdminDashboard (ya tiene sidebar interno + historial).
+  // Si luego quieres dashboards por rol, se pueden enchufar acá sin perder el layout.
+  const onNavigate = useLegacyNavigate()
+  return <AdminDashboard key={rol || 'anon'} onNavigate={onNavigate} />
+}
 
-  function navigate(nuevaRuta, nuevosParams = {}) {
-    setRuta(nuevaRuta)
-    setParams(nuevosParams)
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
     window.scrollTo(0, 0)
-  }
+  }, [pathname])
+  return null
+}
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-  }
+function ActaDetalleRoute() {
+  const { actaId } = useParams()
+  const navigate = useNavigate()
+  const onNavigate = useLegacyNavigate()
+  return <ActaDetalleScreen actaId={actaId} onNavigate={onNavigate} onVolver={() => navigate('/actas')} />
+}
 
-  if (cargando) {
+function ActasListRoute() {
+  const onNavigate = useLegacyNavigate()
+  return <ActasListScreen onNavigate={onNavigate} />
+}
+
+function ActaNuevaRoute() {
+  const navigate = useNavigate()
+  return <ActaForm onVolver={() => navigate('/')} />
+}
+
+function ActaEditarRoute() {
+  const { actaId } = useParams()
+  const navigate = useNavigate()
+  const [acta, setActa] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!actaId) return
+    actaService.obtener(actaId)
+      .then(setActa)
+      .catch((e) => setError(e?.message || 'Error al cargar acta'))
+  }, [actaId])
+
+  if (error) {
     return (
-      <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F5F5' }}>
-        <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando...</p>
+      <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <p className="s-error">⚠ {error}</p>
+        <button className="s-btn-secondary" style={{ marginTop: 16 }} onClick={() => navigate(`/actas/${actaId}`)}>
+          Volver
+        </button>
       </div>
     )
   }
 
-  function renderPantalla() {
-    // Dashboard
-    if (ruta === 'dashboard') return <DashboardScreen onNavigate={navigate} />
-
-    // ── Actas ──
-    if (ruta === 'actas') return <ActasListScreen onNavigate={navigate} />
-    if (ruta === 'actas/nueva') return <ActaForm onVolver={() => navigate('dashboard')} />
-    if (ruta.startsWith('actas/')) {
-      const actaId = ruta.split('/')[1]
-      return <ActaDetalleScreen actaId={actaId} onNavigate={navigate} onVolver={() => navigate('actas')} />
-    }
-
-    // ── Diagnósticos ──
-    if (ruta === 'diagnosticos') return <DiagnosticosListScreen onNavigate={navigate} />
-    if (ruta.startsWith('diagnosticos/')) {
-      const diagId = ruta.split('/')[1]
-      if (diagnosticoActivo && diagnosticoActivo.id === diagId) {
-        return (
-          <DiagnosticoProvider>
-            <DiagnosticoForm
-              diagnosticoInicial={diagnosticoActivo}
-              onVolver={() => { setDiagnosticoActivo(null); navigate('diagnosticos') }}
-            />
-          </DiagnosticoProvider>
-        )
-      }
-      // Si no tenemos el objeto cargado, cargar desde la lista primero
-      return (
-        <DiagnosticosListScreen
-          onNavigate={(r) => {
-            if (r.startsWith('diagnosticos/')) {
-              const id = r.split('/')[1]
-              import('./services/diagnosticoService').then(({ diagnosticoService }) => {
-                diagnosticoService.obtener(id).then((d) => {
-                  setDiagnosticoActivo(d)
-                  navigate(r)
-                })
-              })
-            } else {
-              navigate(r)
-            }
-          }}
-        />
-      )
-    }
-
-    // ── Cotizaciones ──
-    if (ruta === 'cotizaciones') return <CotizacionesListScreen onNavigate={navigate} />
-    if (ruta.startsWith('cotizaciones/')) {
-      if (cotizacionActiva) {
-        return (
-          <PresupuestoForm
-            cotizacionInicial={cotizacionActiva}
-            onVolver={() => { setCotizacionActiva(null); navigate('cotizaciones') }}
-            onAbrirOT={(ot) => { setCotizacionActiva(null); setOtActiva(ot); navigate(`ordenes-trabajo/${ot.id}`) }}
-          />
-        )
-      }
-      const cotId = ruta.split('/')[1]
-      import('./services/cotizacionService').then(({ cotizacionService }) => {
-        cotizacionService.obtener(cotId).then((c) => {
-          setCotizacionActiva(c)
-          navigate(ruta)
-        })
-      })
-      return (
-        <div style={{ padding: '48px 16px', textAlign: 'center' }}>
-          <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando cotización...</p>
-        </div>
-      )
-    }
-
-    // ── Órdenes de Trabajo ──
-    if (ruta === 'ordenes-trabajo') return <OTListScreen onNavigate={navigate} />
-    if (ruta.startsWith('ordenes-trabajo/')) {
-      if (otActiva) {
-        return (
-          <OTForm
-            otInicial={otActiva}
-            onVolver={() => { setOtActiva(null); navigate('ordenes-trabajo') }}
-          />
-        )
-      }
-      const otId = ruta.split('/')[1]
-      import('./services/ordenTrabajoService').then(({ ordenTrabajoService }) => {
-        ordenTrabajoService.obtener(otId).then((ot) => {
-          setOtActiva(ot)
-          navigate(ruta)
-        })
-      })
-      return (
-        <div style={{ padding: '48px 16px', textAlign: 'center' }}>
-          <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando orden de trabajo...</p>
-        </div>
-      )
-    }
-
-    // ── Clientes ──
-    if (ruta === 'clientes') return <ClientesListScreen onNavigate={navigate} />
-
-    return <DashboardScreen onNavigate={navigate} />
+  if (!acta) {
+    return (
+      <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando acta...</p>
+      </div>
+    )
   }
 
-  // Pantallas sin header (flujo completo)
-  const SIN_HEADER = ['actas/nueva', 'diagnosticos/']
-  const mostrarHeader = !SIN_HEADER.some((p) => ruta === p || ruta.startsWith(p)) &&
-    !ruta.startsWith('ordenes-trabajo/') && !cotizacionActiva
+  return <ActaForm key={actaId} initialActa={acta} onVolver={() => navigate(`/actas/${actaId}`)} />
+}
+
+function DiagnosticoDetalleRoute() {
+  const { diagId } = useParams()
+  const navigate = useNavigate()
+  const [diagnosticoActivo, setDiagnosticoActivo] = useState(null)
+
+  useEffect(() => {
+    // Mantiene el comportamiento previo: si no está cargado el objeto, cargar desde servicio.
+    import('./services/diagnosticoService').then(({ diagnosticoService }) => {
+      diagnosticoService.obtener(diagId).then(setDiagnosticoActivo).catch(() => setDiagnosticoActivo(null))
+    })
+  }, [diagId])
+
+  if (!diagnosticoActivo) {
+    const onNavigate = useLegacyNavigate()
+    return <DiagnosticosListScreen onNavigate={onNavigate} />
+  }
 
   return (
-    <div style={{ minHeight: '100svh', background: '#F5F5F5' }}>
-      {mostrarHeader && (
-        <header style={{ background: '#1e3a8a', padding: '0 16px', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
-          <button
-            onClick={() => { setDiagnosticoActivo(null); setCotizacionActiva(null); setOtActiva(null); navigate('dashboard') }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: 0 }}
-          >
-            <img
-              src="/logo-secco.png"
-              alt="SECCO"
-              style={{ height: 28, objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
-              onError={(e) => { e.target.style.display = 'none' }}
-            />
-            <span style={{ color: '#FFFFFF', fontWeight: 700, fontSize: 15, letterSpacing: '-0.2px' }}>SECCO</span>
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13 }}>{nombre}</span>
-            <button
-              onClick={handleLogout}
-              style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', color: '#FFFFFF', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              Salir
-            </button>
-          </div>
-        </header>
-      )}
+    <DiagnosticoProvider>
+      <DiagnosticoForm diagnosticoInicial={diagnosticoActivo} onVolver={() => navigate('/diagnosticos')} />
+    </DiagnosticoProvider>
+  )
+}
 
-      <main style={{ maxWidth: 600, margin: '0 auto' }}>
-        {renderPantalla()}
-      </main>
-    </div>
+function DiagnosticosListRoute() {
+  const onNavigate = useLegacyNavigate()
+  return <DiagnosticosListScreen onNavigate={onNavigate} />
+}
+
+function CotizacionNuevaRoute() {
+  const navigate = useNavigate()
+  return (
+    <PresupuestoForm
+      cotizacionInicial={nuevaCotizacionPlantilla()}
+      onVolver={() => navigate('/cotizaciones')}
+      onPersistido={(cot) => navigate(`/cotizaciones/${cot.id}`, { replace: true })}
+      onAbrirOT={(ot) => navigate(`/ordenes-trabajo/${ot.id}`)}
+    />
+  )
+}
+
+function CotizacionDetalleRoute() {
+  const { cotId } = useParams()
+  const navigate = useNavigate()
+  const [cotizacionActiva, setCotizacionActiva] = useState(null)
+  const [otActiva, setOtActiva] = useState(null)
+  const [cotizacionError, setCotizacionError] = useState('')
+  const [cotizacionCargando, setCotizacionCargando] = useState(true)
+
+  useEffect(() => {
+    setCotizacionActiva(null)
+    setCotizacionError('')
+    setCotizacionCargando(true)
+    import('./services/cotizacionService').then(({ cotizacionService }) => {
+      cotizacionService
+        .obtener(cotId)
+        .then((cot) => {
+          setCotizacionActiva(cot)
+          setCotizacionError('')
+        })
+        .catch((e) => {
+          setCotizacionActiva(null)
+          setCotizacionError(e?.message || 'No se pudo cargar la cotización')
+        })
+        .finally(() => setCotizacionCargando(false))
+    })
+  }, [cotId])
+
+  if (otActiva) {
+    return <OTForm otInicial={otActiva} onVolver={() => { setOtActiva(null); navigate('/ordenes-trabajo') }} />
+  }
+
+  if (cotizacionCargando) {
+    return (
+      <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando cotización...</p>
+      </div>
+    )
+  }
+
+  if (!cotizacionActiva && cotizacionError) {
+    return (
+      <div style={{ padding: '48px 16px', textAlign: 'center', maxWidth: 420, margin: '0 auto' }}>
+        <p className="s-error" style={{ marginBottom: 16 }}>{cotizacionError}</p>
+        <button type="button" className="s-btn-primary" onClick={() => navigate('/cotizaciones')}>
+          Volver al listado
+        </button>
+      </div>
+    )
+  }
+
+  if (!cotizacionActiva) {
+    return (
+      <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <p style={{ color: '#6B6B6B', fontSize: 14 }}>No hay datos de cotización.</p>
+        <button type="button" className="s-btn-secondary" style={{ marginTop: 16 }} onClick={() => navigate('/cotizaciones')}>
+          Volver al listado
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <PresupuestoForm
+      cotizacionInicial={cotizacionActiva}
+      onVolver={() => navigate('/cotizaciones')}
+      onAbrirOT={(ot) => { setOtActiva(ot); navigate(`/ordenes-trabajo/${ot.id}`) }}
+    />
+  )
+}
+
+function CotizacionesListRoute() {
+  const onNavigate = useLegacyNavigate()
+  return <CotizacionesListScreen onNavigate={onNavigate} />
+}
+
+function OTDetalleRoute() {
+  const { otId } = useParams()
+  const navigate = useNavigate()
+  const [otActiva, setOtActiva] = useState(null)
+
+  useEffect(() => {
+    import('./services/ordenTrabajoService').then(({ ordenTrabajoService }) => {
+      ordenTrabajoService.obtener(otId).then(setOtActiva).catch(() => setOtActiva(null))
+    })
+  }, [otId])
+
+  if (!otActiva) {
+    return (
+      <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando orden de trabajo...</p>
+      </div>
+    )
+  }
+
+  return <OTForm otInicial={otActiva} onVolver={() => navigate('/ordenes-trabajo')} />
+}
+
+function OTListRoute() {
+  const onNavigate = useLegacyNavigate()
+  return <OTListScreen onNavigate={onNavigate} />
+}
+
+function ClientesListRoute() {
+  const onNavigate = useLegacyNavigate()
+  return <ClientesListScreen onNavigate={onNavigate} />
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route index element={<DashboardRoute />} />
+
+        <Route path="actas" element={<ActasListRoute />} />
+        <Route path="actas/nueva" element={<ActaNuevaRoute />} />
+        <Route path="actas/:actaId" element={<ActaDetalleRoute />} />
+        <Route path="actas/:actaId/editar" element={<ActaEditarRoute />} />
+
+        <Route path="diagnosticos" element={<DiagnosticosListRoute />} />
+        <Route path="diagnosticos/:diagId" element={<DiagnosticoDetalleRoute />} />
+
+        <Route path="cotizaciones" element={<CotizacionesListRoute />} />
+        <Route path="cotizaciones/nueva" element={<CotizacionNuevaRoute />} />
+        <Route path="cotizaciones/:cotId" element={<CotizacionDetalleRoute />} />
+
+        <Route path="ordenes-trabajo" element={<OTListRoute />} />
+        <Route path="ordenes-trabajo/:otId" element={<OTDetalleRoute />} />
+
+        <Route path="clientes" element={<ClientesListRoute />} />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
   )
 }
 
@@ -215,14 +291,21 @@ function AuthGate() {
     return <LoginScreen />
   }
 
-  return <AppContent />
+  return <AppRoutes />
 }
 
 // ── App root ──────────────────────────────────────────────────
 export default function App() {
   return (
     <AuthProvider>
-      <AuthGate />
+      <ToastProvider>
+        <ConfirmProvider>
+          <BrowserRouter>
+            <ScrollToTop />
+            <AuthGate />
+          </BrowserRouter>
+        </ConfirmProvider>
+      </ToastProvider>
     </AuthProvider>
   )
 }

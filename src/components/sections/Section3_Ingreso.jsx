@@ -1,20 +1,39 @@
-﻿import { useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import { useForm } from '../../context/FormContext'
 import { validarSeccion3 } from '../../utils/validation'
 import PhotoCapture from '../common/PhotoCapture'
 import FuelSelector from '../common/FuelSelector'
+import { actaService } from '../../services/actaService'
+import { useToast } from '../common/ToastProvider'
+import { extDesdeMime, fileToBase64DataPart } from '../../utils/fotoActa'
 
 const DOCS = [
-  { value: 'permiso',  label: 'Permiso de circulaciÃ³n' },
+  { value: 'permiso',  label: 'Permiso de circulación' },
   { value: 'soap',     label: 'SOAP' },
-  { value: 'revision', label: 'RevisiÃ³n tÃ©cnica' },
+  { value: 'revision', label: 'Revisión técnica' },
   { value: 'ninguna',  label: 'Ninguna' },
   { value: 'otros',    label: 'Otros' },
 ]
 
 export default function Section3_Ingreso({ onNext, onBack }) {
+  const toast = useToast()
   const { formData, updateForm } = useForm()
   const [errores, setErrores] = useState({})
+  const [subiendo, setSubiendo] = useState({ km: false, combustible: false })
+
+  // Si el acta se hidrata después (GET /actas/:id), limpiar errores cuando ya cumple la sección.
+  useEffect(() => {
+    const e = validarSeccion3(formData)
+    if (Object.keys(e).length === 0) setErrores({})
+  }, [
+    formData.fecha_ingreso,
+    formData.hora_ingreso,
+    formData.kilometraje,
+    formData.combustible,
+    formData.llaves,
+    formData.foto_km_preview,
+    formData.foto_combustible_preview,
+  ])
 
   function toggleDoc(val) {
     const actual = formData.documentacion || []
@@ -26,18 +45,62 @@ export default function Section3_Ingreso({ onNext, onBack }) {
     updateForm({ documentacion: nuevo.includes(val) ? nuevo.filter((v) => v !== val) : [...nuevo, val] })
   }
 
-  function handleFotoKm(result) {
+  async function handleFotoKm(result) {
     updateForm(result
       ? { foto_km: result.file, foto_km_preview: result.preview }
       : { foto_km: null, foto_km_preview: null }
     )
+
+    if (!result?.file) return
+    if (!formData.acta_id) {
+      toast.info('La foto se subirá al continuar')
+      return
+    }
+
+    setSubiendo((p) => ({ ...p, km: true }))
+    try {
+      const base64 = await fileToBase64DataPart(result.file)
+      const mimetype = result.file.type || 'image/jpeg'
+      const ext = extDesdeMime(mimetype)
+      await actaService.subirFoto(formData.acta_id, 'km', base64, mimetype, ext)
+
+      // Evitar doble subida al finalizar (ActaForm solo sube si es File)
+      updateForm({ foto_km: null })
+      toast.success('Foto de odómetro subida')
+    } catch (e) {
+      toast.error(e?.message ? `Error al subir foto: ${e.message}` : 'Error al subir foto')
+    } finally {
+      setSubiendo((p) => ({ ...p, km: false }))
+    }
   }
 
-  function handleFotoCombustible(result) {
+  async function handleFotoCombustible(result) {
     updateForm(result
       ? { foto_combustible: result.file, foto_combustible_preview: result.preview }
       : { foto_combustible: null, foto_combustible_preview: null }
     )
+
+    if (!result?.file) return
+    if (!formData.acta_id) {
+      toast.info('La foto se subirá al continuar')
+      return
+    }
+
+    setSubiendo((p) => ({ ...p, combustible: true }))
+    try {
+      const base64 = await fileToBase64DataPart(result.file)
+      const mimetype = result.file.type || 'image/jpeg'
+      const ext = extDesdeMime(mimetype)
+      await actaService.subirFoto(formData.acta_id, 'combustible', base64, mimetype, ext)
+
+      // Evitar doble subida al finalizar
+      updateForm({ foto_combustible: null })
+      toast.success('Foto de combustible subida')
+    } catch (e) {
+      toast.error(e?.message ? `Error al subir foto: ${e.message}` : 'Error al subir foto')
+    } finally {
+      setSubiendo((p) => ({ ...p, combustible: false }))
+    }
   }
 
   function handleSubmit() {
@@ -50,7 +113,7 @@ export default function Section3_Ingreso({ onNext, onBack }) {
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
         <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>
-          TÃ©cnico
+          Técnico
         </p>
         <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
           Datos de Ingreso
@@ -91,8 +154,9 @@ export default function Section3_Ingreso({ onNext, onBack }) {
           </div>
           {errores.kilometraje && <p className="s-error">âš  {errores.kilometraje}</p>}
           <div style={{ marginTop: 16 }}>
-            <PhotoCapture label="Foto del odÃ³metro" required preview={formData.foto_km_preview} onChange={handleFotoKm} />
+            <PhotoCapture label="Foto del odómetro" required preview={formData.foto_km_preview} onChange={handleFotoKm} />
             {errores.foto_km && <p className="s-error">âš  {errores.foto_km}</p>}
+            {subiendo.km && <p style={{ margin: '8px 0 0', fontSize: 12, color: '#6B6B6B' }}>Subiendo foto…</p>}
           </div>
         </div>
 
@@ -104,6 +168,7 @@ export default function Section3_Ingreso({ onNext, onBack }) {
           <div style={{ marginTop: 16 }}>
             <PhotoCapture label="Foto del indicador" required preview={formData.foto_combustible_preview} onChange={handleFotoCombustible} />
             {errores.foto_combustible && <p className="s-error">âš  {errores.foto_combustible}</p>}
+            {subiendo.combustible && <p style={{ margin: '8px 0 0', fontSize: 12, color: '#6B6B6B' }}>Subiendo foto…</p>}
           </div>
         </div>
 
@@ -130,7 +195,7 @@ export default function Section3_Ingreso({ onNext, onBack }) {
 
         {/* DocumentaciÃ³n */}
         <div>
-          <label className="s-label">DocumentaciÃ³n entregada</label>
+          <label className="s-label">Documentación entregada</label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {DOCS.map((doc) => {
               const checked = (formData.documentacion || []).includes(doc.value)

@@ -76,18 +76,83 @@ function restaurarDesdeSession() {
   return null
 }
 
-export function FormProvider({ children }) {
-  const [formData, setFormData] = useState(() => restaurarDesdeSession() || initialState())
+/**
+ * Mapeo puro GET /api/actas/:id → estado del formulario (mismo criterio que `cargarDesdeActa`).
+ * Sirve para calcular el paso inicial sin depender del estado React recién actualizado.
+ */
+export function mergeActaIntoInitialForm(acta) {
+  if (!acta?.id) return initialState()
+  const cliente = acta.clientes
+  const vehiculo = acta.vehiculos
+  const fotosActa = Array.isArray(acta.fotos_acta) ? acta.fotos_acta : []
+  const fotoPorTipo = Object.fromEntries(
+    fotosActa
+      .filter((f) => f?.tipo && f?.url)
+      .map((f) => [String(f.tipo).toLowerCase().trim(), String(f.url)])
+  )
+  const now = new Date()
+  return {
+    ...initialState(),
+    nombre: cliente?.nombre || '',
+    rut: cliente?.rut || '',
+    telefono: cliente?.telefono || '',
+    email: cliente?.email || '',
+    nombre_cliente: acta.nombre_cliente || cliente?.nombre || '',
+    marca: vehiculo?.marca || '',
+    modelo: vehiculo?.modelo || '',
+    anio: vehiculo?.anio || '',
+    patente: vehiculo?.patente || '',
+    vin: vehiculo?.vin || '',
+    color: vehiculo?.color || '',
+    acta_id: acta.id,
+    numero_acta: acta.numero_acta,
+    cliente_id: acta.cliente_id,
+    vehiculo_id: acta.vehiculo_id,
+    fecha_ingreso: acta.fecha_ingreso || now.toISOString().slice(0, 10),
+    hora_ingreso: acta.hora_ingreso?.slice(0, 5) || now.toTimeString().slice(0, 5),
+    kilometraje: acta.km === undefined || acta.km === null ? '' : String(acta.km),
+    combustible: acta.combustible || '',
+    llaves: acta.llaves === undefined || acta.llaves === null ? '' : Number(acta.llaves),
+    documentacion: Array.isArray(acta.documentacion) ? acta.documentacion : (acta.documentacion ? [acta.documentacion] : []),
+    documentacion_otros: acta.documentacion_otros || '',
+    foto_km_preview: fotoPorTipo.km || null,
+    foto_combustible_preview: fotoPorTipo.combustible || null,
+    estado_exterior: acta.estado_exterior || '',
+    detalle_exterior: acta.detalle_exterior || '',
+    estado_interior: acta.estado_interior || '',
+    detalle_interior: acta.detalle_interior || '',
+    fotos: {
+      ...(fotoPorTipo.frontal ? { frontal: fotoPorTipo.frontal } : {}),
+      ...(fotoPorTipo.trasera ? { trasera: fotoPorTipo.trasera } : {}),
+      ...(fotoPorTipo.lateral_izq ? { lateral_izq: fotoPorTipo.lateral_izq } : {}),
+      ...(fotoPorTipo.lateral_der ? { lateral_der: fotoPorTipo.lateral_der } : {}),
+      ...(fotoPorTipo.interior ? { interior: [{ id: 'interior-0', preview: fotoPorTipo.interior }] } : {}),
+    },
+    trabajo_solicitado: acta.trabajo_solicitado || '',
+    presupuesto_inicial_id: acta.presupuesto_inicial_id || null,
+    acepta_declaracion: !!acta.acepta_declaracion,
+    acepta_responsabilidad_objetos: !!acta.acepta_responsabilidad_objetos,
+    acepta_pruebas_ruta: !!acta.acepta_pruebas_ruta,
+    firma_cliente: fotoPorTipo.firma_cliente || acta.firma_cliente_url || null,
+    firma_secco: fotoPorTipo.firma_secco || acta.firma_secco_url || null,
+    nombre_responsable: acta.nombre_responsable || acta.tecnico_nombre || acta.tc_nombre || '',
+    cargo_responsable: acta.cargo_responsable || '',
+  }
+}
+
+export function FormProvider({ children, restore = true }) {
+  const [formData, setFormData] = useState(() => (restore ? (restaurarDesdeSession() || initialState()) : initialState()))
 
   // Sincronizar al sessionStorage en cada cambio (excepto campos no serializables)
   useEffect(() => {
+    if (!restore) return
     try {
       const toSave = Object.fromEntries(
         Object.entries(formData).filter(([k]) => !SKIP_FIELDS.has(k))
       )
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(toSave))
     } catch {}
-  }, [formData])
+  }, [formData, restore])
 
   const updateForm = useCallback((campos) => {
     setFormData((prev) => ({ ...prev, ...campos }))
@@ -101,32 +166,7 @@ export function FormProvider({ children }) {
   // Carga datos desde un acta borrador de Supabase
   const cargarDesdeActa = useCallback((acta) => {
     try { sessionStorage.removeItem(SESSION_KEY) } catch {}
-    const cliente = acta.clientes
-    const vehiculo = acta.vehiculos
-    const now = new Date()
-    setFormData({
-      ...initialState(),
-      // Cliente
-      nombre: cliente?.nombre || '',
-      rut: cliente?.rut || '',
-      telefono: cliente?.telefono || '',
-      email: cliente?.email || '',
-      nombre_cliente: cliente?.nombre || '',
-      // Vehículo
-      marca: vehiculo?.marca || '',
-      modelo: vehiculo?.modelo || '',
-      anio: vehiculo?.anio || '',
-      patente: vehiculo?.patente || '',
-      vin: vehiculo?.vin || '',
-      color: vehiculo?.color || '',
-      // Acta
-      acta_id: acta.id,
-      numero_acta: acta.numero_acta,
-      cliente_id: acta.cliente_id,
-      vehiculo_id: acta.vehiculo_id,
-      fecha_ingreso: acta.fecha_ingreso || now.toISOString().slice(0, 10),
-      hora_ingreso: acta.hora_ingreso?.slice(0, 5) || now.toTimeString().slice(0, 5),
-    })
+    setFormData(mergeActaIntoInitialForm(acta))
   }, [])
 
   return (

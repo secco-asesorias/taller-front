@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { actaService } from '../../services/actaService'
 import { generarPDFDesdeActaGuardada } from '../../utils/pdf'
+import { useToast } from '../../components/common/ToastProvider'
+import { useConfirm } from '../../components/common/ConfirmProvider'
 
 function Campo({ label, value }) {
   if (value === null || value === undefined || value === '') return null
@@ -34,10 +36,13 @@ function statusStyle(status) {
 }
 
 export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
+  const toast = useToast()
+  const { confirm } = useConfirm()
   const [acta, setActa] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [descargando, setDescargando] = useState(false)
+  const [eliminando, setEliminando] = useState(false)
 
   useEffect(() => {
     if (!actaId) { setError('ID de acta no especificado'); setLoading(false); return }
@@ -53,6 +58,27 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
     try { await generarPDFDesdeActaGuardada(acta) }
     catch (e) { alert(`Error al generar PDF: ${e.message}`) }
     finally { setDescargando(false) }
+  }
+
+  async function handleEliminar() {
+    if (!actaId) return
+    const ok = await confirm({
+      title: 'Eliminar acta',
+      message: '¿Eliminar esta acta? Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      danger: true,
+    })
+    if (!ok) return
+    setEliminando(true)
+    try {
+      await actaService.eliminar(actaId)
+      toast.success('Acta eliminada')
+      onVolver?.()
+    } catch (e) {
+      toast.error(e?.message ? `Error al eliminar: ${e.message}` : 'Error al eliminar')
+    } finally {
+      setEliminando(false)
+    }
   }
 
   if (loading) {
@@ -108,6 +134,21 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
           style={{ height: 36, padding: '0 14px', borderRadius: 8, border: '1.5px solid #a98225', background: '#FFFFFF', color: '#a98225', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, opacity: descargando ? 0.5 : 1 }}
         >
           {descargando ? '...' : '↓ PDF'}
+        </button>
+        <button
+          type="button"
+          onClick={() => { toast.info('Editando acta…'); onNavigate?.(`actas/${actaId}/editar`) }}
+          style={{ height: 36, padding: '0 12px', borderRadius: 8, border: '1.5px solid #1e3a8a', background: '#FFFFFF', color: '#1e3a8a', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+        >
+          Editar
+        </button>
+        <button
+          type="button"
+          onClick={handleEliminar}
+          disabled={eliminando}
+          style={{ height: 36, padding: '0 12px', borderRadius: 8, border: '1.5px solid rgba(255,69,58,0.55)', background: 'rgba(255,69,58,0.06)', color: '#FF453A', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, opacity: eliminando ? 0.6 : 1 }}
+        >
+          {eliminando ? '...' : 'Eliminar'}
         </button>
       </div>
 

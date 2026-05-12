@@ -9,4 +9,5 @@ export const clienteService = {
   obtenerPorRut: (rut) => api.get(`/api/clientes/rut/${encodeURIComponent(rut)}`),
   crear: (datos) => api.post('/api/clientes', datos),
   actualizar: (id, datos) => api.put(`/api/clientes/${id}`, datos),
+  eliminar: (id) => api.delete(`/api/clientes/${id}`),
 };

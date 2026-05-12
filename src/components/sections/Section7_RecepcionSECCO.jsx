@@ -3,7 +3,7 @@ import { useForm } from '../../context/FormContext'
 import { validarSeccion7 } from '../../utils/validation'
 import SignaturePad from '../common/SignaturePad'
 
-const CARGOS = ['TÃ©cnico', 'Torre de Control', 'Jefe de Taller', 'AdministraciÃ³n']
+const CARGOS = ['Técnico', 'Torre de Control', 'Jefe de Taller', 'Administración']
 
 export default function Section7_RecepcionSECCO({ onNext, onBack }) {
   const { formData, updateForm } = useForm()
@@ -19,7 +19,7 @@ export default function Section7_RecepcionSECCO({ onNext, onBack }) {
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
         <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>SECCO</p>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>RecepciÃ³n SECCO</h2>
+        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>Recepción SECCO</h2>
         <div className="s-divider" />
       </div>
 
@@ -32,7 +32,7 @@ export default function Section7_RecepcionSECCO({ onNext, onBack }) {
             placeholder="Nombre completo"
             className={`s-input ${errores.nombre_responsable ? 's-input-err' : ''}`}
           />
-          {errores.nombre_responsable && <p className="s-error">âš  {errores.nombre_responsable}</p>}
+          {errores.nombre_responsable && <p className="s-error">{errores.nombre_responsable}</p>}
         </div>
 
         <div style={{ marginBottom: 20 }}>
@@ -52,7 +52,7 @@ export default function Section7_RecepcionSECCO({ onNext, onBack }) {
               )
             })}
           </div>
-          {errores.cargo_responsable && <p className="s-error">âš  {errores.cargo_responsable}</p>}
+          {errores.cargo_responsable && <p className="s-error">{errores.cargo_responsable}</p>}
         </div>
 
         <div>
@@ -65,7 +65,7 @@ export default function Section7_RecepcionSECCO({ onNext, onBack }) {
 
       <div className="s-card" style={{ marginBottom: 16 }}>
         <SignaturePad label="Firma SECCO" onChange={(d) => updateForm({ firma_secco: d })} />
-        {errores.firma_secco && <p className="s-error">âš  {errores.firma_secco}</p>}
+        {errores.firma_secco && <p className="s-error">{errores.firma_secco}</p>}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>

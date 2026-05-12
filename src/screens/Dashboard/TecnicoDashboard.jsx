@@ -6,15 +6,18 @@ const ACCIONES = [
 ]
 
 export default function TecnicoDashboard({ onNavigate }) {
-  const { nombre } = useRol()
+  const { nombre, rolEtiqueta } = useRol()
 
   return (
     <div style={{ padding: '24px 16px 40px' }}>
       <div style={{ marginBottom: 24 }}>
         <p style={{ color: '#6B6B6B', fontSize: 13, margin: '0 0 2px' }}>Bienvenido,</p>
         <h2 style={{ color: '#111114', fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: '-0.3px' }}>
-          {nombre || 'Técnico'}
+          {nombre}
         </h2>
+        {rolEtiqueta ? (
+          <p style={{ margin: '6px 0 0', color: '#6B6B6B', fontSize: 12 }}>{rolEtiqueta}</p>
+        ) : null}
         <div className="s-divider" />
       </div>
 

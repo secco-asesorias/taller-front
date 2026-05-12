@@ -78,6 +78,10 @@ function calcularTotalesCotizacion(items = [], descuento = 0, overrides = {}) {
 }
 
 // ─── Constantes ───────────────────────────────────────────────
+const PRESUPUESTO_TOTALE_STORAGE_KEY = 'secco_presupuesto_alto_panel_totales'
+const PRESUPUESTO_TOTALE_DEFAULT = 360
+const PRESUPUESTO_TOTALE_MIN = 168
+
 const TIPOS = ['Repuesto', 'Servicio']
 const TIPO_COLOR = { 'Repuesto': '#a98225', 'Servicio': '#228b50' }
 
@@ -206,6 +210,50 @@ function itemsForDB(rows, mo) {
     observacion: '',
   }] : []
   return [...base, ...moItem]
+}
+
+const ITEM_API_PLACEHOLDER = {
+  tipo: 'servicio',
+  descripcion: 'Descripción pendiente',
+  cantidad: 1,
+  costo_unitario: 0,
+  precio_unitario: 0,
+  mano_obra: 0,
+  urgencia: 'recomendado',
+  observacion: '',
+}
+
+/** Ítems listos para API: sin filas vacías (Zod exige descripción). */
+function itemsGuardados(rows, mo) {
+  const raw = itemsForDB(rows, mo).filter((it) => String(it.descripcion || '').trim())
+  return raw.length ? raw : [ITEM_API_PLACEHOLDER]
+}
+
+/** Plantilla para `/cotizaciones/nueva` (sin POST hasta el primer guardado). */
+export function nuevaCotizacionPlantilla() {
+  return {
+    id: null,
+    numero_cotizacion: null,
+    status: 'borrador',
+    items: [],
+    notas: '',
+    notas_internas: '',
+    descuento: 0,
+    vista_cliente: {
+      titulo: '',
+      tipo_presupuesto: 'final',
+      descuento_tipo: 'monto',
+      descuento_valor: 0,
+      horas_trabajo: 0,
+      costo_hora_tecnico: 4900,
+      cliente_manual: { nombre: '', telefono: '', email: '' },
+      vehiculo_manual: { marca: '', modelo: '', patente: '', anio: '' },
+    },
+    diagnosticos: null,
+    actas: null,
+    clientes: null,
+    vehiculos: null,
+  }
 }
 
 function buildPool(cotizacion) {
@@ -388,6 +436,7 @@ function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onE
       <td style={td({})}>
         <input
           type="text"
+          data-presup-desc={row._id}
           value={row.descripcion}
           onChange={(e) => upd('descripcion', e.target.value)}
           onFocus={() => onFocus(row._id)}
@@ -494,8 +543,10 @@ function CurrencyInput({ value, onChange, onRowFocus, placeholder = '$0', style 
 }
 
 // ─── PresupuestoForm ──────────────────────────────────────────
-export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT }) {
-  const [cotizacion] = useState(cotizacionInicial)
+export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT, onPersistido }) {
+  const [cotizacion, setCotizacion] = useState(cotizacionInicial)
+  const cotizacionIdRef = useRef(cotizacionInicial?.id || null)
+  const cotizacionSnapRef = useRef(cotizacionInicial)
 
   // Separar ítems normales de la fila de M.O.
   const margenInicial = cotizacionInicial.vista_cliente?.margen_pct ?? 30
@@ -519,16 +570,29 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     return horas > 0 && ventaMoInicial > 0 ? ventaMoInicial / horas : 0
   })
   const [activeRow, setActiveRow] = useState(null)
-  const [saveStatus, setSaveStatus] = useState('saved')
+  const [saveStatus, setSaveStatus] = useState(() => (cotizacionInicial?.id ? 'saved' : 'local'))
   const [status, setStatus]       = useState(cotizacionInicial.status || 'borrador')
   const [loading, setLoading]     = useState(false)
   const [isWide, setIsWide]       = useState(window.innerWidth >= 900)
   const [showDiag, setShowDiag]   = useState(false)
   const [showRechazo, setShowRechazo] = useState(false)
   const [motivoRechazo, setMotivoRechazo] = useState('')
+  const [alturaPanelTotales, setAlturaPanelTotales] = useState(() => {
+    try {
+      const v = Number(sessionStorage.getItem(PRESUPUESTO_TOTALE_STORAGE_KEY))
+      if (Number.isFinite(v) && v >= PRESUPUESTO_TOTALE_MIN) return v
+    } catch { /* ignore */ }
+    return PRESUPUESTO_TOTALE_DEFAULT
+  })
+  const resizeTotalesDrag = useRef({ active: false, startY: 0, startH: 0 })
   const saveTimer = useRef(null)
 
-  const autocompletePool = useMemo(() => buildPool(cotizacionInicial), [cotizacionInicial])
+  useEffect(() => {
+    cotizacionIdRef.current = cotizacion?.id || null
+    cotizacionSnapRef.current = cotizacion
+  }, [cotizacion])
+
+  const autocompletePool = useMemo(() => buildPool(cotizacion), [cotizacion])
   const veh = cotizacion.vehiculos || cotizacion.actas?.vehiculos || {}
   const cli = cotizacion.clientes  || cotizacion.actas?.clientes  || cotizacion.vista_cliente?.cliente_manual || {}
   const horasTrabajoNum = useMemo(() => Math.max(0, toNumber(horasTrabajo)), [horasTrabajo])
@@ -558,9 +622,10 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   const totalCobroCliente = useMemo(() => totales.total_final_cliente ?? totalClienteCobro(totales.total), [totales.total, totales.total_final_cliente])
 
   function buildVistaClientePayload(totalesActuales = totales) {
+    const vc = cotizacion.vista_cliente || {}
     const payload = {
       titulo,
-      tipo_presupuesto: cotizacionInicial.vista_cliente?.tipo_presupuesto || cotizacionInicial.tipo_presupuesto || 'final',
+      tipo_presupuesto: vc.tipo_presupuesto || cotizacion.tipo_presupuesto || 'final',
       descuento_tipo: descuentoTipo,
       descuento_valor: descuento,
       margen_pct: margen,
@@ -569,20 +634,63 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       valor_hora_cliente_mo: Number(valorHoraClienteMo || 0),
       resumen_interno: buildResumenInternoSnapshot(totalesActuales),
     }
-    if (cotizacionInicial.vista_cliente?.cliente_manual) {
-      payload.cliente_manual = cotizacionInicial.vista_cliente.cliente_manual
+    if (vc.cliente_manual && Object.keys(vc.cliente_manual).length) {
+      payload.cliente_manual = vc.cliente_manual
     }
-    if (cotizacionInicial.vista_cliente?.vehiculo_manual) {
-      payload.vehiculo_manual = cotizacionInicial.vista_cliente.vehiculo_manual
+    if (vc.vehiculo_manual && Object.keys(vc.vehiculo_manual).length) {
+      payload.vehiculo_manual = vc.vehiculo_manual
     }
     return payload
   }
 
+  /**
+   * Primera persistencia: crea fila mínima en servidor y aplica el contenido actual.
+   * @returns {{ id: string, created: boolean, full?: object }}
+   */
+  async function ensurePersistida() {
+    const existing = cotizacionIdRef.current || cotizacion?.id
+    if (existing) return { id: existing, created: false, full: null }
+    setSaveStatus('saving')
+    try {
+      const base = await cotizacionService.crearBorrador()
+      const id = base?.id
+      if (!id) throw new Error('No se obtuvo id al crear el borrador')
+      const items = itemsGuardados(rows, manoDeObraCalculada)
+      await cotizacionService.actualizar(id, {
+        items,
+        descuento,
+        descuento_tipo: descuentoTipo,
+        notas,
+        notas_internas: notasInternas,
+        vista_cliente: buildVistaClientePayload(),
+        status: 'borrador',
+      })
+      const full = await cotizacionService.obtener(id)
+      setCotizacion(full)
+      cotizacionIdRef.current = full.id
+      setSaveStatus('saved')
+      return { id: full.id, created: true, full }
+    } catch (e) {
+      setSaveStatus('error')
+      throw e
+    }
+  }
+
   // ── Autosave ───────────────────────────────────────────────
   const scheduleAutosave = useCallback((r, mo, nd, ndt, nn, nni, nt, mg, ht, cht, vhcm) => {
+    if (!cotizacionIdRef.current) {
+      clearTimeout(saveTimer.current)
+      setSaveStatus('local')
+      return
+    }
     setSaveStatus('unsaved')
     clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(async () => {
+      const id = cotizacionIdRef.current
+      if (!id) {
+        setSaveStatus('local')
+        return
+      }
       setSaveStatus('saving')
       try {
         const horasTrabajoActual = Math.max(0, toNumber(ht))
@@ -597,8 +705,10 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
           horas_trabajo: ht,
           costo_hora_tecnico: cht,
         })
-        await cotizacionService.actualizar(cotizacion.id, {
-          items: itemsForDB(r, manoDeObraActual),
+        const snap = cotizacionSnapRef.current || {}
+        const vcBase = snap.vista_cliente || {}
+        await cotizacionService.actualizar(id, {
+          items: itemsGuardados(r, manoDeObraActual),
           descuento: nd, descuento_tipo: ndt,
           notas: nn, notas_internas: nni,
           vista_cliente: {
@@ -610,15 +720,15 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
             costo_hora_tecnico: toNumber(cht),
             valor_hora_cliente_mo: tarifaHoraClienteActual,
             resumen_interno: buildResumenInternoSnapshot(totalesActuales),
-            tipo_presupuesto: cotizacionInicial.vista_cliente?.tipo_presupuesto || cotizacionInicial.tipo_presupuesto || 'final',
-            ...(cotizacionInicial.vista_cliente?.cliente_manual ? { cliente_manual: cotizacionInicial.vista_cliente.cliente_manual } : {}),
-            ...(cotizacionInicial.vista_cliente?.vehiculo_manual ? { vehiculo_manual: cotizacionInicial.vista_cliente.vehiculo_manual } : {}),
+            tipo_presupuesto: vcBase.tipo_presupuesto || snap.tipo_presupuesto || 'final',
+            ...(vcBase.cliente_manual ? { cliente_manual: vcBase.cliente_manual } : {}),
+            ...(vcBase.vehiculo_manual ? { vehiculo_manual: vcBase.vehiculo_manual } : {}),
           },
         })
         setSaveStatus('saved')
       } catch { setSaveStatus('error') }
     }, 1400)
-  }, [cotizacion.id, valorHoraClienteMo])
+  }, [valorHoraClienteMo])
 
   function touch(r, mo, nd, ndt, nn, nni, nt, mg, ht, cht, vhcm) {
     scheduleAutosave(
@@ -664,12 +774,35 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     setRows(next)
     setActiveRow(r._id)
     touch(next, null, null, null, null, null, null, null)
+    return r._id
   }
 
-  function handleEnter(id) {
-    const idx = rows.findIndex((r) => r._id === id)
-    if (idx === rows.length - 1) addRow()
-    else setActiveRow(rows[idx + 1]._id)
+  function focusDescripcionRow(rowId) {
+    const id = String(rowId)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`input[data-presup-desc="${id}"]`)
+        if (el && typeof el.focus === 'function') {
+          el.focus()
+          const v = String(el.value || '')
+          if (!v.trim() && typeof el.select === 'function') el.select()
+          else if (typeof el.setSelectionRange === 'function') el.setSelectionRange(v.length, v.length)
+        }
+      })
+    })
+  }
+
+  function handleEnter(rowId) {
+    const idx = rows.findIndex((r) => r._id === rowId)
+    if (idx < 0) return
+    if (idx === rows.length - 1) {
+      const newId = addRow()
+      focusDescripcionRow(newId)
+    } else {
+      const nextId = rows[idx + 1]._id
+      setActiveRow(nextId)
+      focusDescripcionRow(nextId)
+    }
   }
 
   function updateMO(field, value) {
@@ -695,13 +828,15 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     setLoading(true)
     try {
       clearTimeout(saveTimer.current)
-      await cotizacionService.actualizar(cotizacion.id, {
-        items: itemsForDB(rows, manoDeObraCalculada),
+      const persisted = await ensurePersistida()
+      await cotizacionService.actualizar(persisted.id, {
+        items: itemsGuardados(rows, manoDeObraCalculada),
         descuento, descuento_tipo: descuentoTipo,
         notas, notas_internas: notasInternas,
         vista_cliente: buildVistaClientePayload(),
         status: newStatus,
       })
+      if (persisted.created && persisted.full && onPersistido) onPersistido(persisted.full)
       if (newStatus !== status) setStatus(newStatus)
       setSaveStatus('saved')
     } catch (e) { alert(`Error: ${e.message}`) }
@@ -712,14 +847,16 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     setLoading(true)
     try {
       clearTimeout(saveTimer.current)
-      await cotizacionService.actualizar(cotizacion.id, {
-        items: itemsForDB(rows, manoDeObraCalculada),
+      const persisted = await ensurePersistida()
+      await cotizacionService.actualizar(persisted.id, {
+        items: itemsGuardados(rows, manoDeObraCalculada),
         descuento, descuento_tipo: descuentoTipo,
         notas, notas_internas: notasInternas,
         vista_cliente: buildVistaClientePayload(),
         status: 'enviada',
       })
-      const ot = await cotizacionService.aprobar(cotizacion.id)
+      const ot = await cotizacionService.aprobar(persisted.id)
+      if (persisted.created && persisted.full && onPersistido) onPersistido(persisted.full)
       setStatus('aprobada')
       if (onAbrirOT) onAbrirOT(ot)
     } catch (e) { alert(`Error al aprobar: ${e.message}`) }
@@ -730,7 +867,9 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     if (!motivoRechazo.trim()) { alert('Ingresa el motivo del rechazo.'); return }
     setLoading(true)
     try {
-      await cotizacionService.rechazar(cotizacion.id, motivoRechazo)
+      const persisted = await ensurePersistida()
+      await cotizacionService.rechazar(persisted.id, motivoRechazo)
+      if (persisted.created && persisted.full && onPersistido) onPersistido(persisted.full)
       setStatus('rechazada')
       setShowRechazo(false)
     } catch (e) { alert(`Error al rechazar: ${e.message}`) }
@@ -740,7 +879,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   function cotizacionLocal() {
     return {
       ...cotizacion,
-      items: itemsForDB(rows, manoDeObraCalculada),
+      items: itemsGuardados(rows, manoDeObraCalculada),
       descuento: totales.descuento,
       notas,
       notas_internas: notasInternas,
@@ -758,6 +897,61 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     finally { setLoading(false) }
   }
 
+  async function handleGuardarBorradorManual() {
+    setLoading(true)
+    try {
+      const r = await ensurePersistida()
+      if (r.created && r.full && onPersistido) onPersistido(r.full)
+    } catch (e) {
+      alert(e?.message ? `No se pudo guardar: ${e.message}` : 'No se pudo guardar el borrador')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function clampAlturaTotales(h) {
+    const maxH = Math.min(Math.floor(window.innerHeight * 0.72), 720)
+    return Math.max(PRESUPUESTO_TOTALE_MIN, Math.min(maxH, Math.round(h)))
+  }
+
+  function startResizePanelTotales(e) {
+    if (!e.isPrimary) return
+    if (e.pointerType === 'mouse' && e.button !== 0) return
+    e.preventDefault()
+    const el = e.currentTarget
+    resizeTotalesDrag.current = { active: true, startY: e.clientY, startH: alturaPanelTotales }
+    document.body.style.cursor = 'row-resize'
+    document.body.style.userSelect = 'none'
+    let lastH = alturaPanelTotales
+    try {
+      el.setPointerCapture(e.pointerId)
+    } catch { /* ignore */ }
+    function onMove(ev) {
+      if (!resizeTotalesDrag.current.active) return
+      const dy = ev.clientY - resizeTotalesDrag.current.startY
+      const h = clampAlturaTotales(resizeTotalesDrag.current.startH - dy)
+      lastH = h
+      setAlturaPanelTotales(h)
+    }
+    function onUp(ev) {
+      resizeTotalesDrag.current.active = false
+      try {
+        el.releasePointerCapture(ev.pointerId)
+      } catch { /* ignore */ }
+      el.removeEventListener('pointermove', onMove)
+      el.removeEventListener('pointerup', onUp)
+      el.removeEventListener('pointercancel', onUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      try {
+        sessionStorage.setItem(PRESUPUESTO_TOTALE_STORAGE_KEY, String(lastH))
+      } catch { /* ignore */ }
+    }
+    el.addEventListener('pointermove', onMove)
+    el.addEventListener('pointerup', onUp)
+    el.addEventListener('pointercancel', onUp)
+  }
+
   // ── Render ────────────────────────────────────────────────
   const sc = {
     sin_asignar: { bg: '#111114', color: '#FFFFFF' },
@@ -773,6 +967,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   const patenteHeader = veh.patente || vehManual.patente || 'SIN ASIGNAR'
   const moVentaNeta = ventaMoCalculada
   const tieneAsignacion = Boolean(cotizacion.acta_id || cotizacion.vehiculo_id || cotizacion.actas?.id || cotizacion.vehiculos?.id)
+  const esSoloLocal = !cotizacion?.id
 
   return (
     <div style={{ height: '100svh', display: 'flex', flexDirection: 'column', background: '#FFFFFF', overflow: 'hidden' }}>
@@ -786,10 +981,34 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
           <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111114', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {vehHeader} · <span style={{ fontFamily: 'monospace', letterSpacing: '1px' }}>{patenteHeader}</span>
           </p>
-          <p style={{ margin: 0, fontSize: 11, color: '#6B6B6B' }}>{cli.nombre}</p>
+          <p style={{ margin: 0, fontSize: 11, color: '#6B6B6B' }}>{cli.nombre || (esSoloLocal ? 'Completá datos en el presupuesto o vinculá un acta después' : '')}</p>
         </div>
-        <span style={{ fontSize: 11, flexShrink: 0, color: saveStatus === 'saved' ? '#a98225' : saveStatus === 'saving' ? '#AAAAAA' : '#FF453A' }}>
-          {saveStatus === 'saved' ? '✓ Guardado' : saveStatus === 'saving' ? 'Guardando…' : saveStatus === 'error' ? '⚠ Error' : '●'}
+        {esSoloLocal && (
+          <button
+            type="button"
+            onClick={handleGuardarBorradorManual}
+            disabled={loading}
+            style={{
+              flexShrink: 0,
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 700,
+              fontFamily: 'inherit',
+              borderRadius: 8,
+              border: '1px solid rgba(169,130,37,0.45)',
+              background: 'rgba(169,130,37,0.12)',
+              color: '#8a6a1a',
+              cursor: loading ? 'default' : 'pointer',
+              opacity: loading ? 0.7 : 1,
+            }}
+          >
+            {loading ? '…' : 'Guardar borrador'}
+          </button>
+        )}
+        <span style={{ fontSize: 11, flexShrink: 0, color: saveStatus === 'saved' ? '#a98225' : saveStatus === 'saving' ? '#AAAAAA' : saveStatus === 'error' ? '#FF453A' : saveStatus === 'local' ? '#6B6B6B' : '#AAAAAA' }}>
+          {esSoloLocal
+            ? (saveStatus === 'saving' ? 'Subiendo…' : saveStatus === 'error' ? '⚠ Error' : saveStatus === 'saved' ? '✓ En servidor' : 'Solo local')
+            : (saveStatus === 'saved' ? '✓ Guardado' : saveStatus === 'saving' ? 'Guardando…' : saveStatus === 'error' ? '⚠ Error' : '●')}
         </span>
         <span style={{ background: sc.bg, color: sc.color, fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6, flexShrink: 0, textTransform: 'capitalize' }}>
           {status === 'sin_asignar' ? 'Sin asignar' : statusText(status)}
@@ -915,8 +1134,53 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
             </div>
           </div>
 
+          {/* Separador: arrastrar para dar más alto a ítems o a márgenes/resumen */}
+          <div
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Redimensionar panel de márgenes y totales"
+            title="Arrastrá para ajustar el alto del panel inferior (doble clic restaura altura por defecto)"
+            onPointerDown={startResizePanelTotales}
+            onDoubleClick={() => {
+              setAlturaPanelTotales(PRESUPUESTO_TOTALE_DEFAULT)
+              try {
+                sessionStorage.setItem(PRESUPUESTO_TOTALE_STORAGE_KEY, String(PRESUPUESTO_TOTALE_DEFAULT))
+              } catch { /* ignore */ }
+            }}
+            style={{
+              flexShrink: 0,
+              height: 11,
+              cursor: 'row-resize',
+              touchAction: 'none',
+              userSelect: 'none',
+              background: 'linear-gradient(180deg, #f5f5f5 0%, #ebebeb 50%, #e2e2e2 100%)',
+              borderTop: '1px solid #dcdcdc',
+              borderBottom: '1px solid #c8c8c8',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 3,
+            }}
+          >
+            <span style={{ width: 28, height: 3, borderRadius: 2, background: '#b0b0b0', display: 'block' }} aria-hidden />
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#888888', letterSpacing: '0.5px' }}>⋮⋮</span>
+            <span style={{ width: 28, height: 3, borderRadius: 2, background: '#b0b0b0', display: 'block' }} aria-hidden />
+          </div>
+
           {/* ── Totales ──────────────────────────────────────── */}
-          <div style={{ borderTop: '1.5px solid #E0E0E0', flexShrink: 0 }}>
+          <div
+            style={{
+              height: alturaPanelTotales,
+              minHeight: PRESUPUESTO_TOTALE_MIN,
+              flexShrink: 0,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              WebkitOverflowScrolling: 'touch',
+              borderTop: 'none',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
 
             {/* Margen de repuestos */}
             <div style={{ padding: '8px 16px', borderBottom: '1px solid #F2F2F2', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1168,10 +1432,20 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
           flexDirection: 'column', overflow: 'hidden', background: '#FAFAFA',
         }}>
           <div style={{ padding: '11px 20px', borderBottom: '1px solid #E0E0E0', flexShrink: 0, background: '#FFFFFF' }}>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Diagnóstico</p>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              {cotizacion?.diagnosticos ? 'Diagnóstico' : 'Contexto'}
+            </p>
           </div>
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <DiagnosticoPanel cotizacion={cotizacionInicial} />
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            {esSoloLocal && (
+              <div style={{ padding: '14px 18px', background: 'rgba(169,130,37,0.07)', borderBottom: '1px solid rgba(169,130,37,0.18)' }}>
+                <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: '#a98225' }}>Mismo diseño que siempre</p>
+                <p style={{ margin: 0, fontSize: 12, color: '#6B6B6B', lineHeight: 1.55 }}>
+                  Ítems y mano de obra arriba, margen y descuentos en el bloque inferior, resumen financiero al pie. Guardá el borrador en el servidor cuando quieras conservarlo o seguí editando solo en esta pestaña.
+                </p>
+              </div>
+            )}
+            <DiagnosticoPanel cotizacion={cotizacion} />
           </div>
         </div>
       </div>
