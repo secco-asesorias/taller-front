@@ -6,7 +6,14 @@ export const diagnosticoService = {
     return api.get(`/api/diagnosticos${qs ? `?${qs}` : ''}`);
   },
   obtener: (id) => api.get(`/api/diagnosticos/${id}`),
-  buscarPorPatente: (patente) => api.get(`/api/diagnosticos/buscar/patente/${encodeURIComponent(patente)}`),
+  /** GET /api/diagnosticos/buscar/patente/:patente?limite=&status=&todos= */
+  buscarPorPatente: (patente, params = {}) => {
+    const path = `/api/diagnosticos/buscar/patente/${encodeURIComponent(patente)}`
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== '')),
+    ).toString()
+    return api.get(`${path}${qs ? `?${qs}` : ''}`)
+  },
   crear: (actaId, patente) => api.post('/api/diagnosticos', { acta_id: actaId, patente }),
   actualizar: (id, datos) => api.put(`/api/diagnosticos/${id}`, datos),
   guardarChecklist: (id, items) => api.put(`/api/diagnosticos/${id}/checklist`, { items }),

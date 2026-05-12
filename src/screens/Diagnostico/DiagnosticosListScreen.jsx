@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react'
+import { unwrapApiList } from '../../lib/unwrapApiList'
 import { diagnosticoService } from '../../services/diagnosticoService'
+
+const LIMITE_LISTA = 50
 
 const STATUS_LABEL = {
   pendiente: 'Pendiente',
@@ -19,19 +22,74 @@ function statusStyle(status) {
 export default function DiagnosticosListScreen({ onNavigate }) {
   const [diagnosticos, setDiagnosticos] = useState([])
   const [loading, setLoading] = useState(true)
+  const [filtro, setFiltro] = useState('')
+  const [filtroDebounced, setFiltroDebounced] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
-    diagnosticoService.listar({ limite: 50 })
-      .then(setDiagnosticos)
-      .catch((err) => setError(err.message || 'Error al cargar diagnósticos'))
-      .finally(() => setLoading(false))
-  }, [])
+    const trimmed = filtro.trim()
+    if (!trimmed) {
+      setFiltroDebounced('')
+      return
+    }
+    const t = setTimeout(() => setFiltroDebounced(trimmed), 350)
+    return () => clearTimeout(t)
+  }, [filtro])
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError('')
+
+    const req = filtroDebounced
+      ? diagnosticoService.buscarPorPatente(filtroDebounced, { limite: LIMITE_LISTA })
+      : diagnosticoService.listar({ limite: LIMITE_LISTA })
+
+    req
+      .then((data) => {
+        if (cancelled) return
+        setDiagnosticos(unwrapApiList(data, ['diagnosticos']))
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err?.message || 'Error al cargar diagnósticos')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [filtroDebounced])
 
   return (
     <div style={{ padding: '24px 16px 40px' }}>
-      <div style={{ marginBottom: 20 }}>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 700, margin: 0 }}>Diagnósticos</h2>
+      <style>{`
+        .diag-toolbar { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; }
+        .diag-searchWrap { position: relative; margin-bottom: 14px; }
+        .diag-searchIcon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #AAAAAA; font-size: 14px; pointer-events: none; }
+      `}</style>
+
+      <div className="diag-toolbar">
+        <div style={{ minWidth: 0 }}>
+          <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 700, margin: 0 }}>Diagnósticos</h2>
+          <p style={{ margin: '4px 0 0', color: '#6B6B6B', fontSize: 12 }}>
+            {loading ? 'Cargando…' : `${diagnosticos.length} resultado${diagnosticos.length === 1 ? '' : 's'}`}
+          </p>
+        </div>
+      </div>
+
+      <div className="diag-searchWrap">
+        <span className="diag-searchIcon">⌕</span>
+        <input
+          type="text"
+          className="s-input"
+          placeholder="Buscar por patente…"
+          value={filtro}
+          onChange={(e) => setFiltro(e.target.value)}
+          autoComplete="off"
+          style={{ width: '100%', paddingLeft: 36 }}
+        />
       </div>
 
       {error && <p className="s-error" style={{ marginBottom: 12 }}>⚠ {error}</p>}
@@ -79,7 +137,9 @@ export default function DiagnosticosListScreen({ onNavigate }) {
           })}
           {!diagnosticos.length && (
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
-              <p style={{ color: '#6B6B6B', fontSize: 14 }}>No hay diagnósticos</p>
+              <p style={{ color: '#6B6B6B', fontSize: 14 }}>
+                {filtroDebounced ? 'No hay diagnósticos para esa patente' : 'No hay diagnósticos'}
+              </p>
             </div>
           )}
         </div>

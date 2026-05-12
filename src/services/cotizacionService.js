@@ -5,6 +5,14 @@ export const cotizacionService = {
     const qs = new URLSearchParams(params).toString();
     return api.get(`/api/cotizaciones${qs ? `?${qs}` : ''}`);
   },
+  /** GET /api/cotizaciones/buscar/patente/:patente?limite= */
+  buscarPorPatente: (patente, params = {}) => {
+    const path = `/api/cotizaciones/buscar/patente/${encodeURIComponent(patente)}`
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== '')),
+    ).toString()
+    return api.get(`${path}${qs ? `?${qs}` : ''}`)
+  },
   obtener: (id) => api.get(`/api/cotizaciones/${id}`),
   crearBorrador: () => api.post('/api/cotizaciones/borrador', {}),
   crearInicialDesdeActa: (actaId) => api.post(`/api/cotizaciones/desde-acta/${actaId}`, {}),

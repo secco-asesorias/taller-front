@@ -6,6 +6,14 @@ export const actaService = {
     return api.get(`/api/actas${qs ? `?${qs}` : ''}`);
   },
   obtener: (id) => api.get(`/api/actas/${id}`),
+  /** GET /api/actas/patente/:patente?limite=&status= */
+  buscarPorPatente: (patente, params = {}) => {
+    const path = `/api/actas/patente/${encodeURIComponent(patente)}`
+    const qs = new URLSearchParams(
+      Object.fromEntries(Object.entries(params).filter(([, v]) => v != null && v !== '')),
+    ).toString()
+    return api.get(`${path}${qs ? `?${qs}` : ''}`)
+  },
   buscarBorradorPorPatente: (patente) => api.get(`/api/actas/borrador/patente/${encodeURIComponent(patente)}`),
   guardarBorrador: (formData) => api.post('/api/actas/borrador', formData),
   crear: (datos) => api.post('/api/actas', datos),

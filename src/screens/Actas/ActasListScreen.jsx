@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { unwrapApiList } from '../../lib/unwrapApiList'
 import { actaService } from '../../services/actaService'
 import { useToast } from '../../components/common/ToastProvider'
+
+const LIMITE_LISTA = 50
 
 const STATUS_LABEL = {
   borrador: 'Borrador',
@@ -10,19 +13,25 @@ const STATUS_LABEL = {
 
 const STATUS_FILTROS = [
   { value: 'todos', label: 'Todos' },
-  { value: 'activa', label: 'Activas' },
-  { value: 'borrador', label: 'Borradores' },
-  { value: 'cerrada', label: 'Cerradas' },
+  { value: 'borrador', label: 'Borrador' },
+  { value: 'activa', label: 'Activa' },
+  { value: 'cerrada', label: 'Cerrada' },
 ]
 
+function actaStatusKey(status) {
+  return String(status || '').toLowerCase()
+}
+
 function statusStyle(status) {
-  if (status === 'cerrada') return { background: 'rgba(52,199,89,0.12)', color: '#1a7a34', border: '1px solid rgba(52,199,89,0.3)' }
-  if (status === 'borrador') return { background: 'rgba(107,107,107,0.10)', color: '#6B6B6B', border: '1px solid #E0E0E0' }
+  const s = actaStatusKey(status)
+  if (s === 'cerrada') return { background: 'rgba(52,199,89,0.12)', color: '#1a7a34', border: '1px solid rgba(52,199,89,0.3)' }
+  if (s === 'borrador') return { background: 'rgba(107,107,107,0.10)', color: '#6B6B6B', border: '1px solid #E0E0E0' }
   return { background: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' }
 }
 
 function puedeContinuarActa(status) {
-  return status === 'borrador' || status === 'activa'
+  const s = actaStatusKey(status)
+  return s === 'borrador' || s === 'activa'
 }
 
 export default function ActasListScreen({ onNavigate }) {
@@ -30,28 +39,50 @@ export default function ActasListScreen({ onNavigate }) {
   const [actas, setActas] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
+  const [filtroDebounced, setFiltroDebounced] = useState('')
   const [statusFiltro, setStatusFiltro] = useState('todos')
   const [error, setError] = useState('')
 
   useEffect(() => {
-    actaService.listar({ limite: 50 })
-      .then(setActas)
-      .catch((err) => setError(err.message || 'Error al cargar actas'))
-      .finally(() => setLoading(false))
-  }, [])
+    const trimmed = filtro.trim()
+    if (!trimmed) {
+      setFiltroDebounced('')
+      return
+    }
+    const t = setTimeout(() => setFiltroDebounced(trimmed), 350)
+    return () => clearTimeout(t)
+  }, [filtro])
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError('')
+
+    const req = filtroDebounced
+      ? actaService.buscarPorPatente(filtroDebounced, { limite: LIMITE_LISTA })
+      : actaService.listar({ limite: LIMITE_LISTA })
+
+    req
+      .then((data) => {
+        if (cancelled) return
+        setActas(unwrapApiList(data, ['actas']))
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err?.message || 'Error al cargar actas')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [filtroDebounced])
 
   const filtradas = useMemo(() => {
-    const q = filtro.trim().toLowerCase()
-    return actas.filter((a) => {
-      if (statusFiltro !== 'todos' && a.status !== statusFiltro) return false
-      if (!q) return true
-      return (
-        a.clientes?.nombre?.toLowerCase().includes(q) ||
-        a.vehiculos?.patente?.toLowerCase().includes(q) ||
-        String(a.numero_acta).includes(q)
-      )
-    })
-  }, [actas, filtro, statusFiltro])
+    if (statusFiltro === 'todos') return actas
+    return actas.filter((a) => actaStatusKey(a.status) === statusFiltro)
+  }, [actas, statusFiltro])
 
   return (
     <div style={{ padding: '14px 12px 40px' }}>
@@ -91,7 +122,7 @@ export default function ActasListScreen({ onNavigate }) {
           <span className="actas-searchIcon">⌕</span>
           <input
             type="text"
-            placeholder="Buscar por patente, cliente o N° acta..."
+            placeholder="Buscar por patente…"
             value={filtro}
             onChange={(e) => setFiltro(e.target.value)}
             className="s-input"
@@ -155,7 +186,7 @@ export default function ActasListScreen({ onNavigate }) {
                   flexShrink: 0,
                   ...statusStyle(acta.status),
                 }}>
-                  {STATUS_LABEL[acta.status] || acta.status}
+                  {STATUS_LABEL[actaStatusKey(acta.status)] || acta.status}
                 </span>
               </div>
               {(acta.fecha_ingreso || puedeContinuarActa(acta.status)) ? (

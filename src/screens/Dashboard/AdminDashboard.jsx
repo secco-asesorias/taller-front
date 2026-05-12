@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { unwrapApiList } from '../../lib/unwrapApiList'
 import { useRol } from '../../context/AuthContext'
 import { actaService } from '../../services/actaService'
 import { diagnosticoService } from '../../services/diagnosticoService'
@@ -29,7 +30,11 @@ function contarPorStatus(list = [], campo = 'status') {
 export default function AdminDashboard({ onNavigate }) {
   const { nombre, rolEtiqueta } = useRol()
   const [actas, setActas] = useState([])
+  const actasRecientesRef = useRef([])
   const [loading, setLoading] = useState(true)
+  const [buscandoPatente, setBuscandoPatente] = useState(false)
+  const [patenteInput, setPatenteInput] = useState('')
+  const [patenteDebounced, setPatenteDebounced] = useState('')
   const [error, setError] = useState('')
   const [resumen, setResumen] = useState({
     actas: { total: 0, porStatus: {} },
@@ -50,13 +55,17 @@ export default function AdminDashboard({ onNavigate }) {
       ordenTrabajoService.listar({ limite: 50 }),
     ])
       .then(([actasTop, actasAll, diagsAll, cotsAll, otsAll]) => {
-        if (actasTop.status === 'fulfilled') setActas(actasTop.value || [])
+        if (actasTop.status === 'fulfilled') {
+          const list = unwrapApiList(actasTop.value, ['actas'])
+          setActas(list)
+          actasRecientesRef.current = list
+        }
         if (actasTop.status === 'rejected') setError(actasTop.reason?.message || 'Error al cargar actas')
 
-        const actasList = actasAll.status === 'fulfilled' ? (actasAll.value || []) : []
-        const diagsList = diagsAll.status === 'fulfilled' ? (diagsAll.value || []) : []
-        const cotsList = cotsAll.status === 'fulfilled' ? (cotsAll.value || []) : []
-        const otsList = otsAll.status === 'fulfilled' ? (otsAll.value || []) : []
+        const actasList = actasAll.status === 'fulfilled' ? unwrapApiList(actasAll.value, ['actas']) : []
+        const diagsList = diagsAll.status === 'fulfilled' ? unwrapApiList(diagsAll.value, ['diagnosticos']) : []
+        const cotsList = cotsAll.status === 'fulfilled' ? unwrapApiList(cotsAll.value, ['cotizaciones']) : []
+        const otsList = otsAll.status === 'fulfilled' ? unwrapApiList(otsAll.value, ['ordenes']) : []
 
         setResumen({
           actas: { total: actasList.length, porStatus: contarPorStatus(actasList) },
@@ -67,6 +76,45 @@ export default function AdminDashboard({ onNavigate }) {
       })
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    const t = setTimeout(() => setPatenteDebounced(patenteInput.trim()), 350)
+    return () => clearTimeout(t)
+  }, [patenteInput])
+
+  useEffect(() => {
+    if (loading) return
+
+    const normalizarLista = (data) => unwrapApiList(data, ['actas'])
+
+    if (!patenteDebounced) {
+      setActas(actasRecientesRef.current)
+      setBuscandoPatente(false)
+      setError('')
+      return
+    }
+
+    let cancelled = false
+    setBuscandoPatente(true)
+    setError('')
+
+    actaService
+      .buscarPorPatente(patenteDebounced, { limite: 20 })
+      .then((data) => {
+        if (cancelled) return
+        setActas(normalizarLista(data))
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err?.message || 'Error al buscar por patente')
+      })
+      .finally(() => {
+        if (!cancelled) setBuscandoPatente(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [patenteDebounced, loading])
 
   return (
     <div style={{ padding: '12px 4px 28px' }}>
@@ -167,7 +215,9 @@ export default function AdminDashboard({ onNavigate }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0 }}>
             <p style={{ margin: 0, color: '#111114', fontSize: 16, fontWeight: 800 }}>Historial de actas</p>
-            <p style={{ margin: '2px 0 0', color: '#6B6B6B', fontSize: 12 }}>Últimas recepciones</p>
+            <p style={{ margin: '2px 0 0', color: '#6B6B6B', fontSize: 12 }}>
+              {patenteDebounced ? 'Resultados por patente' : 'Últimas recepciones'}
+            </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             <button className="s-btn-secondary" style={{ padding: '8px 12px', fontSize: 12 }} onClick={() => onNavigate?.('actas')}>
@@ -179,11 +229,28 @@ export default function AdminDashboard({ onNavigate }) {
           </div>
         </div>
 
+        <div style={{ marginBottom: 12 }}>
+          <input
+            type="text"
+            className="s-input"
+            placeholder="Buscar por patente (ej. ABCD12)"
+            value={patenteInput}
+            onChange={(e) => setPatenteInput(e.target.value)}
+            disabled={loading}
+            autoComplete="off"
+            style={{ width: '100%', minWidth: 0 }}
+          />
+        </div>
+
         {error && <p className="s-error" style={{ marginBottom: 10 }}>⚠ {error}</p>}
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '26px 0' }}>
             <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0 }}>Cargando actas...</p>
+          </div>
+        ) : buscandoPatente ? (
+          <div style={{ textAlign: 'center', padding: '26px 0' }}>
+            <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0 }}>Buscando por patente…</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -263,7 +330,9 @@ export default function AdminDashboard({ onNavigate }) {
 
             {!actas.length && (
               <div style={{ textAlign: 'center', padding: '26px 0' }}>
-                <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0 }}>Aún no hay actas</p>
+                <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0 }}>
+                  {patenteDebounced ? 'No hay actas con esa patente' : 'Aún no hay actas'}
+                </p>
               </div>
             )}
           </div>
