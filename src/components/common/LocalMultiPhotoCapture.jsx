@@ -1,13 +1,15 @@
 import { useRef, useState } from 'react'
 
-const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
-const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp'])
+const ALLOWED_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'])
 
+/** Galerías móviles a veces envían MIME vacío o tipos genéricos; no bloquear si ya pasó accept="image/*". */
 function validarImagen(file) {
-  const ext = file.name?.split('.').pop()?.toLowerCase()
-  if (!ALLOWED_TYPES.has(file.type) || !ALLOWED_EXTENSIONS.has(ext)) {
-    throw new Error('Formato no permitido. Usa JPG, JPEG, PNG o WebP.')
-  }
+  const ext = file.name?.includes('.') ? file.name.split('.').pop()?.toLowerCase() || '' : ''
+  const type = (file.type || '').toLowerCase()
+  if (type.startsWith('image/')) return
+  if (ALLOWED_EXTENSIONS.has(ext)) return
+  if (!type && !ext) return
+  throw new Error('Formato no permitido. Usa JPG, PNG, WebP o una imagen de la galería.')
 }
 
 function previewFile(file) {
@@ -109,45 +111,54 @@ export default function LocalMultiPhotoCapture({ label, required = false, fotos 
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        disabled={loading}
-        style={{
-          width: '100%',
-          height: 112,
-          background: '#F5F5F5',
-          border: '1.5px dashed #E0E0E0',
-          borderRadius: 12,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          cursor: 'pointer',
-          opacity: loading ? 0.65 : 1,
-        }}
-      >
-        {loading ? (
-          <div style={{ width: 22, height: 22, border: '2px solid #a98225', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-        ) : (
-          <>
-            <span style={{ fontSize: 28 }}>📷</span>
-            <span style={{ color: '#6B6B6B', fontSize: 13, fontWeight: 500 }}>Agregar fotos</span>
-          </>
-        )}
-      </button>
+      <div style={{ position: 'relative', width: '100%', height: 112 }}>
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            background: '#F5F5F5',
+            border: '1.5px dashed #E0E0E0',
+            borderRadius: 12,
+            pointerEvents: 'none',
+            opacity: loading ? 0.65 : 1,
+          }}
+        >
+          {loading ? (
+            <div style={{ width: 22, height: 22, border: '2px solid #a98225', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+          ) : (
+            <>
+              <span style={{ fontSize: 28 }}>📷</span>
+              <span style={{ color: '#6B6B6B', fontSize: 13, fontWeight: 500 }}>Galería o cámara</span>
+            </>
+          )}
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          disabled={loading}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            opacity: 0,
+            cursor: loading ? 'wait' : 'pointer',
+            fontSize: 0,
+            zIndex: 2,
+          }}
+          onChange={handleFiles}
+        />
+      </div>
 
       {error && <p className="s-error">⚠ {error}</p>}
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-        multiple
-        style={{ display: 'none' }}
-        onChange={handleFiles}
-      />
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>

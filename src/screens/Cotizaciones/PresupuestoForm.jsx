@@ -245,6 +245,9 @@ const ITEM_API_PLACEHOLDER = {
   observacion: '',
 }
 
+const EMPTY_CLIENTE_MANUAL = { nombre: '', telefono: '', email: '' }
+const EMPTY_VEHICULO_MANUAL = { marca: '', modelo: '', patente: '', anio: '' }
+
 /** Ítems listos para API: sin filas vacías (Zod exige descripción). */
 function itemsGuardados(rows, mo) {
   const raw = itemsForDB(rows, mo).filter((it) => String(it.descripcion || '').trim())
@@ -268,8 +271,8 @@ export function nuevaCotizacionPlantilla() {
       descuento_valor: 0,
       horas_trabajo: 0,
       costo_hora_tecnico: 4900,
-      cliente_manual: { nombre: '', telefono: '', email: '' },
-      vehiculo_manual: { marca: '', modelo: '', patente: '', anio: '' },
+      cliente_manual: { ...EMPTY_CLIENTE_MANUAL },
+      vehiculo_manual: { ...EMPTY_VEHICULO_MANUAL },
     },
     diagnosticos: null,
     actas: null,
@@ -295,8 +298,8 @@ function buildPool(cotizacion) {
 function DiagnosticoPanel({ cotizacion }) {
   const diag = cotizacion.diagnosticos
   const acta = cotizacion.actas || diag?.actas || {}
-  const veh  = cotizacion.vehiculos || acta.vehiculos || {}
-  const cli  = cotizacion.clientes  || acta.clientes  || {}
+  const veh  = cotizacion.vehiculos || acta.vehiculos || cotizacion.vista_cliente?.vehiculo_manual || {}
+  const cli  = cotizacion.clientes  || acta.clientes  || cotizacion.vista_cliente?.cliente_manual || {}
 
   if (!diag) {
     return (
@@ -611,6 +614,25 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   const resizeTotalesDrag = useRef({ active: false, startY: 0, startH: 0 })
   const saveTimer = useRef(null)
 
+  const [clienteManual, setClienteManual] = useState(() => ({
+    ...EMPTY_CLIENTE_MANUAL,
+    ...(cotizacionInicial.vista_cliente?.cliente_manual || {}),
+  }))
+  const [vehiculoManual, setVehiculoManual] = useState(() => ({
+    ...EMPTY_VEHICULO_MANUAL,
+    ...(cotizacionInicial.vista_cliente?.vehiculo_manual || {}),
+  }))
+  const clienteManualRef = useRef(clienteManual)
+  const vehiculoManualRef = useRef(vehiculoManual)
+  useEffect(() => { clienteManualRef.current = clienteManual }, [clienteManual])
+  useEffect(() => { vehiculoManualRef.current = vehiculoManual }, [vehiculoManual])
+
+  useEffect(() => {
+    const vc = cotizacion.vista_cliente || {}
+    setClienteManual({ ...EMPTY_CLIENTE_MANUAL, ...(vc.cliente_manual || {}) })
+    setVehiculoManual({ ...EMPTY_VEHICULO_MANUAL, ...(vc.vehiculo_manual || {}) })
+  }, [cotizacion.id])
+
   useEffect(() => {
     cotizacionIdRef.current = cotizacion?.id || null
     cotizacionSnapRef.current = cotizacion
@@ -618,7 +640,19 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
 
   const autocompletePool = useMemo(() => buildPool(cotizacion), [cotizacion])
   const veh = cotizacion.vehiculos || cotizacion.actas?.vehiculos || {}
-  const cli = cotizacion.clientes  || cotizacion.actas?.clientes  || cotizacion.vista_cliente?.cliente_manual || {}
+  const cli = cotizacion.clientes || cotizacion.actas?.clientes || {
+    ...EMPTY_CLIENTE_MANUAL,
+    ...(cotizacion.vista_cliente?.cliente_manual || {}),
+    ...clienteManual,
+  }
+  const cotizacionParaPanel = useMemo(() => ({
+    ...cotizacion,
+    vista_cliente: {
+      ...(cotizacion.vista_cliente || {}),
+      cliente_manual: { ...EMPTY_CLIENTE_MANUAL, ...(cotizacion.vista_cliente?.cliente_manual || {}), ...clienteManual },
+      vehiculo_manual: { ...EMPTY_VEHICULO_MANUAL, ...(cotizacion.vista_cliente?.vehiculo_manual || {}), ...vehiculoManual },
+    },
+  }), [cotizacion, clienteManual, vehiculoManual])
   const horasTrabajoNum = useMemo(() => Math.max(0, toNumber(horasTrabajo)), [horasTrabajo])
   const ventaMoCalculada = useMemo(() => {
     if (horasTrabajoNum > 0 && valorHoraClienteMo > 0) {
@@ -647,7 +681,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
 
   function buildVistaClientePayload(totalesActuales = totales) {
     const vc = cotizacion.vista_cliente || {}
-    const payload = {
+    return {
       titulo,
       tipo_presupuesto: vc.tipo_presupuesto || cotizacion.tipo_presupuesto || 'final',
       descuento_tipo: descuentoTipo,
@@ -657,14 +691,9 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       costo_hora_tecnico: toNumber(costoHoraTecnico),
       valor_hora_cliente_mo: Number(valorHoraClienteMo || 0),
       resumen_interno: buildResumenInternoSnapshot(totalesActuales),
+      cliente_manual: { ...EMPTY_CLIENTE_MANUAL, ...clienteManualRef.current },
+      vehiculo_manual: { ...EMPTY_VEHICULO_MANUAL, ...vehiculoManualRef.current },
     }
-    if (vc.cliente_manual && Object.keys(vc.cliente_manual).length) {
-      payload.cliente_manual = vc.cliente_manual
-    }
-    if (vc.vehiculo_manual && Object.keys(vc.vehiculo_manual).length) {
-      payload.vehiculo_manual = vc.vehiculo_manual
-    }
-    return payload
   }
 
   /**
@@ -745,8 +774,8 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
             valor_hora_cliente_mo: tarifaHoraClienteActual,
             resumen_interno: buildResumenInternoSnapshot(totalesActuales),
             tipo_presupuesto: vcBase.tipo_presupuesto || snap.tipo_presupuesto || 'final',
-            ...(vcBase.cliente_manual ? { cliente_manual: vcBase.cliente_manual } : {}),
-            ...(vcBase.vehiculo_manual ? { vehiculo_manual: vcBase.vehiculo_manual } : {}),
+            cliente_manual: { ...EMPTY_CLIENTE_MANUAL, ...clienteManualRef.current },
+            vehiculo_manual: { ...EMPTY_VEHICULO_MANUAL, ...vehiculoManualRef.current },
           },
         })
         setSaveStatus('saved')
@@ -768,6 +797,24 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       cht ?? costoHoraTecnico,
       vhcm ?? valorHoraClienteMo
     )
+  }
+
+  function patchClienteManual(patch) {
+    setClienteManual((prev) => {
+      const next = { ...prev, ...patch }
+      clienteManualRef.current = next
+      return next
+    })
+    touch()
+  }
+
+  function patchVehiculoManual(patch) {
+    setVehiculoManual((prev) => {
+      const next = { ...prev, ...patch }
+      vehiculoManualRef.current = next
+      return next
+    })
+    touch()
   }
 
   // ── Filas ─────────────────────────────────────────────────
@@ -986,9 +1033,9 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     aprobada: { bg: 'rgba(34,139,80,0.12)', color: '#228b50' },
     rechazada: { bg: 'rgba(255,69,58,0.10)', color: '#FF453A' },
   }[status] || { bg: '#F5F5F5', color: '#6B6B6B' }
-  const vehManual = cotizacion.vista_cliente?.vehiculo_manual || {}
-  const vehHeader = `${veh.marca || vehManual.marca || ''} ${veh.modelo || vehManual.modelo || ''}`.trim() || 'Presupuesto sin asignar'
-  const patenteHeader = veh.patente || vehManual.patente || 'SIN ASIGNAR'
+  const vehManualMerged = { ...EMPTY_VEHICULO_MANUAL, ...(cotizacion.vista_cliente?.vehiculo_manual || {}), ...vehiculoManual }
+  const vehHeader = `${veh.marca || vehManualMerged.marca || ''} ${veh.modelo || vehManualMerged.modelo || ''}`.trim() || 'Presupuesto sin asignar'
+  const patenteHeader = veh.patente || vehManualMerged.patente || 'SIN ASIGNAR'
   const moVentaNeta = ventaMoCalculada
   const tieneAsignacion = Boolean(cotizacion.acta_id || cotizacion.vehiculo_id || cotizacion.actas?.id || cotizacion.vehiculos?.id)
   const esSoloLocal = !cotizacion?.id
@@ -1469,7 +1516,97 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                 </p>
               </div>
             )}
-            <DiagnosticoPanel cotizacion={cotizacion} />
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #E0E0E0', background: '#FFFFFF' }}>
+              <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#111114' }}>Cliente y vehículo</p>
+              <p style={{ margin: '0 0 12px', fontSize: 11, color: '#6B6B6B', lineHeight: 1.45 }}>
+                Contacto y datos del auto para el PDF al cliente y el encabezado. Si la cotización viene de un acta, suelen venir cargados.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px 12px' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: '1 / -1' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Nombre</span>
+                  <input
+                    type="text"
+                    className="s-input"
+                    value={clienteManual.nombre}
+                    onChange={(e) => patchClienteManual({ nombre: e.target.value })}
+                    placeholder="Nombre del cliente"
+                    autoComplete="name"
+                    style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8 }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Teléfono</span>
+                  <input
+                    type="tel"
+                    className="s-input"
+                    value={clienteManual.telefono}
+                    onChange={(e) => patchClienteManual({ telefono: e.target.value })}
+                    placeholder="+56…"
+                    autoComplete="tel"
+                    style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8 }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Correo</span>
+                  <input
+                    type="email"
+                    className="s-input"
+                    value={clienteManual.email}
+                    onChange={(e) => patchClienteManual({ email: e.target.value })}
+                    placeholder="correo@ejemplo.cl"
+                    autoComplete="email"
+                    style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8 }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Marca</span>
+                  <input
+                    type="text"
+                    className="s-input"
+                    value={vehiculoManual.marca}
+                    onChange={(e) => patchVehiculoManual({ marca: e.target.value })}
+                    placeholder="Marca"
+                    style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8 }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Modelo</span>
+                  <input
+                    type="text"
+                    className="s-input"
+                    value={vehiculoManual.modelo}
+                    onChange={(e) => patchVehiculoManual({ modelo: e.target.value })}
+                    placeholder="Modelo"
+                    style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8 }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Patente</span>
+                  <input
+                    type="text"
+                    className="s-input"
+                    value={vehiculoManual.patente}
+                    onChange={(e) => patchVehiculoManual({ patente: e.target.value.toUpperCase() })}
+                    placeholder="ABCD12"
+                    autoComplete="off"
+                    style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8, fontFamily: 'monospace', letterSpacing: '1px' }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Año</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className="s-input"
+                    value={vehiculoManual.anio}
+                    onChange={(e) => patchVehiculoManual({ anio: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                    placeholder="2020"
+                    style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8 }}
+                  />
+                </label>
+              </div>
+            </div>
+            <DiagnosticoPanel cotizacion={cotizacionParaPanel} />
           </div>
         </div>
       </div>
