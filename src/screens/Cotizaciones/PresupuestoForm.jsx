@@ -166,15 +166,13 @@ function buildResumenInternoSnapshot(totales) {
     margen_pct: totales.margen_pct,
   }
 }
-function inferMoConcepto(moItems = []) {
-  if (!moItems.length) return 'mano_obra'
-  const first = moItems[0]
-  const d = String(first.descripcion || '').trim()
-  for (const key of TIPOS_ITEM) {
-    if (d === TIPO_ITEM_LABELS[key]) return key
-  }
-  const t = sanitizeTipoItem(first.tipo)
-  return TIPOS_ITEM.includes(t) ? t : 'mano_obra'
+/** Descripción inicial de M.O. al cargar: ignora etiquetas auto-generadas ("Mano de obra", etc.). */
+function inferMoDescripcion(moItems = []) {
+  const labelsAuto = new Set(Object.values(TIPO_ITEM_LABELS).map((s) => s.toLowerCase()))
+  return moItems
+    .map((it) => String(it.descripcion || '').trim())
+    .filter((d) => d && !labelsAuto.has(d.toLowerCase()))
+    .join(' / ')
 }
 
 // Separa ítems normales de la fila de mano de obra.
@@ -204,7 +202,7 @@ function separateItems(raw = [], margenInicial = 30) {
   return {
     rows,
     manoDeObra: {
-      concepto: inferMoConcepto(moItems),
+      descripcion: inferMoDescripcion(moItems),
       precio: moTotal > 0 ? moTotal : '',
     },
   }
@@ -229,7 +227,7 @@ function rowsTieneManoObra(rows) {
   return rows.some((r) => sanitizeTipoItem(r.tipo) === 'mano_obra')
 }
 
-// Arma el array de ítems para guardar en DB (incluye M.O. al final si tiene precio)
+// Arma el array de ítems para guardar en DB (incluye M.O. al final si tiene precio o descripción)
 function itemsForDB(rows, mo) {
   const base = rows.map(({ _id, ...rest }) => ({
     tipo: sanitizeTipoItem(rest.tipo),
@@ -241,15 +239,16 @@ function itemsForDB(rows, mo) {
     urgencia: 'recomendado',
     observacion: '',
   }))
-  const moConceptoKey = TIPOS_ITEM.includes(mo?.concepto) ? mo.concepto : 'mano_obra'
-  const moDesc = TIPO_ITEM_LABELS[moConceptoKey] || 'Mano de obra'
-  const moItem = Number(mo.precio) > 0 && !rowsTieneManoObra(rows) ? [{
+  const precioMo = Number(mo?.precio) || 0
+  const descMo = String(mo?.descripcion || '').trim()
+  const incluirMo = (precioMo > 0 || descMo) && !rowsTieneManoObra(rows)
+  const moItem = incluirMo ? [{
     tipo: 'mano_obra',
-    descripcion: moDesc,
+    descripcion: descMo || 'Mano de obra',
     cantidad: 1,
     costo_unitario: 0,
-    precio_unitario: Number(mo.precio),
-    mano_obra: Number(mo.precio),
+    precio_unitario: precioMo,
+    mano_obra: precioMo,
     urgencia: 'necesario',
     observacion: '',
   }] : []
@@ -1181,31 +1180,21 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                   <tr style={{ background: '#F8F6FF' }}>
                     <td style={td({ width: 28, textAlign: 'center', color: '#AAAAAA', fontSize: 10, fontWeight: 700 })}>M.O.</td>
                     <td style={td({ width: 110 })}>
-                      <div style={{ position: 'relative' }}>
-                        <select
-                          value={TIPOS_ITEM.includes(manoDeObra.concepto) ? manoDeObra.concepto : 'mano_obra'}
-                          onChange={(e) => updateMO('concepto', e.target.value)}
-                          aria-label="Concepto mano de obra"
-                          style={{
-                            width: '100%', border: 'none', background: 'transparent', outline: 'none',
-                            fontSize: 11, fontWeight: 700,
-                            color: TIPO_COLOR[TIPOS_ITEM.includes(manoDeObra.concepto) ? manoDeObra.concepto : 'mano_obra'] || '#5064c8',
-                            fontFamily: 'inherit', padding: '8px 18px 8px 8px', cursor: 'pointer',
-                            appearance: 'none', WebkitAppearance: 'none',
-                            textTransform: 'uppercase', letterSpacing: '0.4px',
-                          }}
-                        >
-                          {TIPOS_ITEM.map((t) => (
-                            <option key={t} value={t}>{TIPO_ITEM_LABELS[t]}</option>
-                          ))}
-                        </select>
-                        <span style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#CCCCCC', pointerEvents: 'none' }}>▾</span>
-                      </div>
+                      <span style={{ display: 'block', padding: '8px 8px', fontSize: 11, fontWeight: 700, color: '#5064c8', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                        M. de Obra
+                      </span>
                     </td>
                     <td style={td({})}>
-                      <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: '#6B6B6B', fontStyle: 'italic' }}>
-                        {TIPO_ITEM_LABELS[TIPOS_ITEM.includes(manoDeObra.concepto) ? manoDeObra.concepto : 'mano_obra']}
-                      </span>
+                      <input
+                        type="text"
+                        value={manoDeObra.descripcion || ''}
+                        onChange={(e) => updateMO('descripcion', e.target.value)}
+                        onFocus={() => setActiveRow(null)}
+                        placeholder="Concepto (ej: cambio de aceite y filtros)"
+                        autoComplete="off"
+                        spellCheck="true"
+                        style={cellInput({ color: '#5064c8' })}
+                      />
                     </td>
                     {/* Cant fija = 1 */}
                     <td style={td({ width: 52, textAlign: 'center', color: '#AAAAAA', fontSize: 12 })}>1</td>
