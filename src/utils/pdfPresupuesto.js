@@ -148,6 +148,7 @@ function datos(cotizacion) {
   return {
     cliente: cli.nombre || '',
     telefono: cli.telefono || '',
+    email: cli.email || '',
     vehiculo: `${veh.marca || vehManual.marca || ''} ${veh.modelo || vehManual.modelo || ''}`.trim(),
     patente: veh.patente || vehManual.patente || '',
     anio: veh.anio || vehManual.anio || '',
@@ -212,6 +213,9 @@ async function generar(cotizacion, modo, opts = {}) {
   text(doc, d.cliente || '-', 14, y + 5, { size: 9, bold: true })
   text(doc, 'TELEFONO', 110, y, { color: GRIS, size: 6.5 })
   text(doc, d.telefono || '-', 110, y + 5, { size: 9, bold: true })
+  y += 13
+  text(doc, 'CORREO', 14, y, { color: GRIS, size: 6.5 })
+  text(doc, d.email || '-', 14, y + 5, { size: 9, bold: true })
   y += 13
   text(doc, 'VEHICULO', 14, y, { color: GRIS, size: 6.5 })
   text(doc, d.vehiculo || '-', 14, y + 5, { size: 9, bold: true })

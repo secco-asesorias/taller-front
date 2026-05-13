@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { unwrapApiList } from '../../lib/unwrapApiList'
 import { cotizacionService } from '../../services/cotizacionService'
+import { useToast } from '../../components/common/ToastProvider'
+import { useConfirm } from '../../components/common/ConfirmProvider'
 
 const LIMITE_LISTA = 50
 
@@ -35,12 +37,15 @@ function money(v) {
 }
 
 export default function CotizacionesListScreen({ onNavigate }) {
+  const toast = useToast()
+  const { confirm } = useConfirm()
   const [cotizaciones, setCotizaciones] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
   const [filtroDebounced, setFiltroDebounced] = useState('')
   const [refreshNonce, setRefreshNonce] = useState(0)
   const [error, setError] = useState('')
+  const [deletingId, setDeletingId] = useState(null)
 
   useEffect(() => {
     const trimmed = filtro.trim()
@@ -84,6 +89,34 @@ export default function CotizacionesListScreen({ onNavigate }) {
   const refrescarLista = () => setRefreshNonce((n) => n + 1)
   const mostrarSpinnerCompleto = loading && !cotizaciones.length
 
+  function irAEditar(cotId) {
+    onNavigate?.(`cotizaciones/${cotId}`)
+  }
+
+  async function handleEliminar(cot) {
+    if (statusKey(cot.status) === 'aprobada') {
+      toast.warning('Las cotizaciones aprobadas no se eliminan desde el listado.')
+      return
+    }
+    const ok = await confirm({
+      title: 'Eliminar cotización',
+      message: `¿Eliminar la cotización COT-${cot.numero_cotizacion}? Esta acción no se puede deshacer.`,
+      confirmText: 'Eliminar',
+      danger: true,
+    })
+    if (!ok) return
+    setDeletingId(cot.id)
+    try {
+      await cotizacionService.eliminar(cot.id)
+      toast.success('Cotización eliminada')
+      refrescarLista()
+    } catch (e) {
+      toast.error(e?.message ? String(e.message) : 'No se pudo eliminar la cotización')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   return (
     <div style={{ padding: '14px 12px 40px', maxWidth: 1040, margin: '0 auto' }}>
       <style>{`
@@ -99,6 +132,12 @@ export default function CotizacionesListScreen({ onNavigate }) {
         @media (min-width: 720px) {
           .cot-grid { grid-template-columns: 1fr 1fr; }
         }
+        .cot-card { border: 1.5px solid #E0E0E0; border-radius: 14px; background: #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,0.06); font-family: inherit; width: 100%; display: flex; flex-direction: column; overflow: hidden; }
+        .cot-card-hit { padding: 16px; text-align: left; cursor: pointer; border: none; background: transparent; font-family: inherit; width: 100%; flex: 1; min-height: 0; }
+        .cot-card-hit:hover { background: rgba(0,0,0,0.02); }
+        .cot-card-hit:focus-visible { outline: 2px solid #a98225; outline-offset: -2px; }
+        .cot-row-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; padding: 10px 12px 12px; border-top: 1px solid #F2F2F2; background: #FAFAFA; }
+        .cot-row-btn { padding: 6px 12px !important; font-size: 11px !important; font-weight: 700 !important; line-height: 1.2 !important; border-radius: 8px !important; min-height: 0 !important; height: auto !important; width: auto !important; }
       `}</style>
 
       <div className="cot-toolbar">
@@ -114,7 +153,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
         </div>
         <div className="cot-actions">
           <button type="button" className="s-btn-primary cot-action-btn" onClick={() => onNavigate?.('cotizaciones/nueva')}>
-            + Nuevo
+            + Agregar
           </button>
           <button type="button" className="s-btn-secondary cot-action-btn" onClick={() => onNavigate?.('actas')}>
             Actas
@@ -170,63 +209,75 @@ export default function CotizacionesListScreen({ onNavigate }) {
           {cotizaciones.map((cot) => {
             const veh = cot.vehiculos || cot.actas?.vehiculos || cot.vista_cliente?.vehiculo_manual || {}
             const cli = cot.clientes || cot.actas?.clientes || cot.vista_cliente?.cliente_manual || {}
+            const eliminarBloqueado = statusKey(cot.status) === 'aprobada'
+            const eliminando = deletingId === cot.id
             return (
-              <button
-                key={cot.id}
-                type="button"
-                onClick={() => onNavigate?.(`cotizaciones/${cot.id}`)}
-                className="s-card"
-                style={{
-                  padding: 16,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  border: '1.5px solid #E0E0E0',
-                  borderRadius: 14,
-                  background: '#FFFFFF',
-                  fontFamily: 'inherit',
-                  width: '100%',
-                  minHeight: 120,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flex: 1 }}>
-                  <div style={{ minWidth: 0 }}>
-                    <p style={{ margin: '0 0 4px', color: '#1e3a8a', fontSize: 14, fontWeight: 800 }}>
-                      COT-{cot.numero_cotizacion}
-                      {cot.vista_cliente?.titulo && (
-                        <span style={{ color: '#6B6B6B', fontWeight: 600 }}> · {cot.vista_cliente.titulo}</span>
-                      )}
-                    </p>
-                    <p style={{ margin: '0 0 4px', color: '#111114', fontSize: 13, lineHeight: 1.35 }}>
-                      {[veh.marca, veh.modelo, veh.patente].filter(Boolean).join(' · ') || 'Sin vehículo en datos'}
-                    </p>
-                    {cli.nombre ? (
-                      <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>{cli.nombre}</p>
-                    ) : null}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        padding: '4px 10px',
-                        borderRadius: 20,
-                        whiteSpace: 'nowrap',
-                        ...statusStyle(cot.status),
-                      }}
-                    >
-                      {STATUS_LABEL[statusKey(cot.status)] || cot.status}
-                    </span>
-                    {(cot.total || cot.total_final_cliente) ? (
-                      <span style={{ fontSize: 13, fontWeight: 800, color: '#a98225' }}>
-                        {money(cot.total_final_cliente || cot.total)}
+              <div key={cot.id} className="cot-card" style={{ minHeight: 120 }}>
+                <button
+                  type="button"
+                  className="cot-card-hit"
+                  onClick={() => irAEditar(cot.id)}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flex: 1 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ margin: '0 0 4px', color: '#1e3a8a', fontSize: 14, fontWeight: 800 }}>
+                        COT-{cot.numero_cotizacion}
+                        {cot.vista_cliente?.titulo && (
+                          <span style={{ color: '#6B6B6B', fontWeight: 600 }}> · {cot.vista_cliente.titulo}</span>
+                        )}
+                      </p>
+                      <p style={{ margin: '0 0 4px', color: '#111114', fontSize: 13, lineHeight: 1.35 }}>
+                        {[veh.marca, veh.modelo, veh.patente].filter(Boolean).join(' · ') || 'Sin vehículo en datos'}
+                      </p>
+                      {cli.nombre ? (
+                        <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>{cli.nombre}</p>
+                      ) : null}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          padding: '4px 10px',
+                          borderRadius: 20,
+                          whiteSpace: 'nowrap',
+                          ...statusStyle(cot.status),
+                        }}
+                      >
+                        {STATUS_LABEL[statusKey(cot.status)] || cot.status}
                       </span>
-                    ) : null}
+                      {(cot.total || cot.total_final_cliente) ? (
+                        <span style={{ fontSize: 13, fontWeight: 800, color: '#a98225' }}>
+                          {money(cot.total_final_cliente || cot.total)}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
+                </button>
+                <div className="cot-row-actions">
+                  <button
+                    type="button"
+                    className="s-btn-secondary cot-row-btn"
+                    onClick={() => irAEditar(cot.id)}
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="s-btn-secondary cot-row-btn"
+                    disabled={eliminando || eliminarBloqueado}
+                    title={eliminarBloqueado ? 'No disponible para cotizaciones aprobadas' : 'Eliminar cotización'}
+                    style={{
+                      borderColor: 'rgba(255,69,58,0.35)',
+                      color: '#FF453A',
+                      opacity: eliminarBloqueado ? 0.45 : 1,
+                    }}
+                    onClick={() => handleEliminar(cot)}
+                  >
+                    {eliminando ? '…' : 'Eliminar'}
+                  </button>
                 </div>
-              </button>
+              </div>
             )
           })}
 
@@ -251,7 +302,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
                   : 'Abre el editor para cargar ítems y totales, o genera un presupuesto desde una acta.'}
               </p>
               <button type="button" className="s-btn-primary" onClick={() => onNavigate?.('cotizaciones/nueva')}>
-                + Nuevo presupuesto
+                + Agregar presupuesto
               </button>
             </div>
           )}
