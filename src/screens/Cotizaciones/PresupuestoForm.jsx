@@ -18,7 +18,6 @@ const TIPO_ITEM_LABELS = {
   trabajo: 'Trabajo',
   mano_obra: 'Mano de obra',
 }
-const TIPOS_LINEA = TIPOS_ITEM.filter((t) => t !== 'mano_obra')
 const TIPO_COLOR = {
   repuesto: '#a98225',
   servicio: '#228b50',
@@ -130,6 +129,14 @@ function statusText(value) {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
+/** Estados de cotización que el front y el API reconocen */
+const STATUS_COTIZACION = Object.freeze(['borrador', 'lista', 'enviada', 'aprobada', 'rechazada', 'sin_asignar'])
+
+function sanitizeCotizacionStatus(raw) {
+  const s = String(raw ?? '').toLowerCase().trim()
+  return STATUS_COTIZACION.includes(s) ? s : 'borrador'
+}
+
 function toNumber(value, fallback = 0) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
@@ -209,10 +216,14 @@ function rowTotal(row) {
   return Math.round(Number(row.cantidad || 1) * Number(row.precio_unitario || 0))
 }
 
+function rowsTieneManoObra(rows) {
+  return rows.some((r) => sanitizeTipoItem(r.tipo) === 'mano_obra')
+}
+
 // Arma el array de ítems para guardar en DB (incluye M.O. al final si tiene precio)
 function itemsForDB(rows, mo) {
   const base = rows.map(({ _id, ...rest }) => ({
-    tipo: sanitizeTipoLinea(rest.tipo),
+    tipo: sanitizeTipoItem(rest.tipo),
     descripcion: rest.descripcion || '',
     cantidad: Number(rest.cantidad) || 1,
     costo_unitario: Number(rest.costo_unitario) || 0,
@@ -221,7 +232,7 @@ function itemsForDB(rows, mo) {
     urgencia: 'recomendado',
     observacion: '',
   }))
-  const moItem = Number(mo.precio) > 0 ? [{
+  const moItem = Number(mo.precio) > 0 && !rowsTieneManoObra(rows) ? [{
     tipo: 'mano_obra',
     descripcion: mo.descripcion || 'Mano de obra',
     cantidad: 1,
@@ -421,10 +432,10 @@ const sLabel = {
 }
 
 // ─── SpreadsheetRow ───────────────────────────────────────────
-// Columnas editables:
-//   Tipo (repuesto | servicio | trabajo), Descripción, Cantidad, Costo SECCO → Precio cliente (+30%) auto, Total (calc)
+// Columna «Concepto»: select con valores del API (repuesto, servicio, trabajo, mano_obra).
 function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onEnter, autocompletePool }) {
   const total = rowTotal(row)
+  const tipoSelectValue = TIPOS_ITEM.includes(row.tipo) ? row.tipo : 'repuesto'
   function upd(field, val) { onChange(row._id, field, val) }
 
   return (
@@ -436,22 +447,22 @@ function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onE
         {index + 1}
       </td>
 
-      {/* Tipo */}
+      {/* Concepto = tipo de ítem (API) */}
       <td style={td({ width: 110 })}>
         <div style={{ position: 'relative' }}>
           <select
-            value={row.tipo}
+            value={tipoSelectValue}
             onChange={(e) => upd('tipo', e.target.value)}
             onFocus={() => onFocus(row._id)}
             style={{
               width: '100%', border: 'none', background: 'transparent', outline: 'none',
-              fontSize: 11, fontWeight: 700, color: TIPO_COLOR[row.tipo] || '#6B6B6B',
+              fontSize: 11, fontWeight: 700, color: TIPO_COLOR[tipoSelectValue] || '#6B6B6B',
               fontFamily: 'inherit', padding: '8px 18px 8px 8px', cursor: 'pointer',
               appearance: 'none', WebkitAppearance: 'none',
               textTransform: 'uppercase', letterSpacing: '0.4px',
             }}
           >
-            {TIPOS_LINEA.map((t) => (
+            {TIPOS_ITEM.map((t) => (
               <option key={t} value={t}>{TIPO_ITEM_LABELS[t]}</option>
             ))}
           </select>
@@ -579,7 +590,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   const margenInicial = cotizacionInicial.vista_cliente?.margen_pct ?? 30
   const init = useMemo(() => separateItems(cotizacionInicial.items, margenInicial), [])
 
-  const [rows, setRows]           = useState(init.rows)
+  const [rows, setRows]           = useState(() => init.rows.map((r) => ({ ...r, tipo: sanitizeTipoItem(r.tipo) })))
   const [manoDeObra, setManoDeObra] = useState(init.manoDeObra)
   const [margen, setMargen]       = useState(cotizacionInicial.vista_cliente?.margen_pct ?? 30)
   const [descuento, setDescuento] = useState(cotizacionInicial.vista_cliente?.descuento_valor ?? cotizacionInicial.descuento ?? 0)
@@ -598,7 +609,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   })
   const [activeRow, setActiveRow] = useState(null)
   const [saveStatus, setSaveStatus] = useState(() => (cotizacionInicial?.id ? 'saved' : 'local'))
-  const [status, setStatus]       = useState(cotizacionInicial.status || 'borrador')
+  const [status, setStatus]       = useState(sanitizeCotizacionStatus(cotizacionInicial.status))
   const [loading, setLoading]     = useState(false)
   const [isWide, setIsWide]       = useState(window.innerWidth >= 900)
   const [showDiag, setShowDiag]   = useState(false)
@@ -721,6 +732,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       const full = await cotizacionService.obtener(id)
       setCotizacion(full)
       cotizacionIdRef.current = full.id
+      setStatus(sanitizeCotizacionStatus(full?.status))
       setSaveStatus('saved')
       return { id: full.id, created: true, full }
     } catch (e) {
@@ -821,7 +833,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   function updateRow(id, field, value) {
     const next = rows.map((r) => {
       if (r._id !== id) return r
-      const updated = { ...r, [field]: field === 'tipo' ? sanitizeTipoLinea(value) : value }
+      const updated = { ...r, [field]: field === 'tipo' ? sanitizeTipoItem(value) : value }
       if (field === 'costo_unitario') {
         const cb = Number(value) || 0
         // Recalcular precio final (con IVA) usando margen real sobre precio de venta
@@ -908,7 +920,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
         status: newStatus,
       })
       if (persisted.created && persisted.full && onPersistido) onPersistido(persisted.full)
-      if (newStatus !== status) setStatus(newStatus)
+      if (newStatus !== status) setStatus(sanitizeCotizacionStatus(newStatus))
       setSaveStatus('saved')
     } catch (e) { alert(`Error: ${e.message}`) }
     finally { setLoading(false) }
@@ -1114,7 +1126,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               <thead>
                 <tr style={{ background: '#FAFAFA', borderBottom: '1.5px solid #E0E0E0' }}>
                   <th style={th({ width: 28 })}>#</th>
-                  <th style={th({ width: 110, textAlign: 'left', paddingLeft: 8 })}>Tipo</th>
+                  <th style={th({ width: 110, textAlign: 'left', paddingLeft: 8 })}>Concepto</th>
                   <th style={th({ textAlign: 'left', paddingLeft: 8 })}>Descripción</th>
                   <th style={th({ width: 52, textAlign: 'right', paddingRight: 8 })}>Cant.</th>
                   <th style={th({ width: 100, textAlign: 'right', paddingRight: 8 })}>Costo SECCO</th>
@@ -1153,20 +1165,33 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <tbody>
                   <tr style={{ background: '#F8F6FF' }}>
-                    <td style={td({ width: 28 })} />
-                    {/* Label fijo */}
+                    <td style={td({ width: 28, textAlign: 'center', color: '#AAAAAA', fontSize: 10, fontWeight: 700 })}>M.O.</td>
                     <td style={td({ width: 110 })}>
-                      <span style={{ display: 'block', padding: '8px 8px', fontSize: 11, fontWeight: 700, color: '#5064c8', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                        M. de Obra
-                      </span>
+                      <div style={{ position: 'relative' }}>
+                        <select
+                          disabled
+                          value="mano_obra"
+                          aria-label="Concepto: mano de obra"
+                          title="Esta fila siempre es mano de obra en el presupuesto"
+                          style={{
+                            width: '100%', border: 'none', background: 'transparent', outline: 'none',
+                            fontSize: 11, fontWeight: 700, color: TIPO_COLOR.mano_obra,
+                            fontFamily: 'inherit', padding: '8px 18px 8px 8px', cursor: 'default',
+                            appearance: 'none', WebkitAppearance: 'none',
+                            textTransform: 'uppercase', letterSpacing: '0.4px', opacity: 1,
+                          }}
+                        >
+                          <option value="mano_obra">{TIPO_ITEM_LABELS.mano_obra}</option>
+                        </select>
+                        <span style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#CCCCCC', pointerEvents: 'none' }}>▾</span>
+                      </div>
                     </td>
-                    {/* Descripción opcional */}
                     <td style={td({})}>
                       <input
                         type="text"
                         value={manoDeObra.descripcion}
                         onChange={(e) => updateMO('descripcion', e.target.value)}
-                        placeholder="Concepto (opcional)"
+                        placeholder="Detalle / concepto (opcional)"
                         style={cellInput({ color: '#5064c8' })}
                       />
                     </td>
