@@ -10,9 +10,42 @@ function precioFinalConMargen(costoBruto, margenPct) {
   return Math.round(costoNeto / (1 - pct / 100) * 1.19)
 }
 
+/** Valores permitidos por el API en `items[].tipo` */
+const TIPOS_ITEM = Object.freeze(['repuesto', 'servicio', 'trabajo', 'mano_obra'])
+const TIPO_ITEM_LABELS = {
+  repuesto: 'Repuesto',
+  servicio: 'Servicio',
+  trabajo: 'Trabajo',
+  mano_obra: 'Mano de obra',
+}
+const TIPOS_LINEA = TIPOS_ITEM.filter((t) => t !== 'mano_obra')
+const TIPO_COLOR = {
+  repuesto: '#a98225',
+  servicio: '#228b50',
+  trabajo: '#1e3a8a',
+  mano_obra: '#5856D6',
+}
+
+function sanitizeTipoItem(raw) {
+  const s = String(raw ?? '').toLowerCase().trim().replace(/\s+/g, '_')
+  if (TIPOS_ITEM.includes(s)) return s
+  if (s === 'extra') return 'servicio'
+  if (s.includes('mano')) return 'mano_obra'
+  if (s.includes('trabajo')) return 'trabajo'
+  if (s.includes('servicio')) return 'servicio'
+  if (s.includes('repuesto')) return 'repuesto'
+  return 'repuesto'
+}
+
+/** Tipo en filas de la tabla (sin mano_obra; eso va en el bloque M.O.) */
+function sanitizeTipoLinea(raw) {
+  const t = sanitizeTipoItem(raw)
+  return t === 'mano_obra' ? 'repuesto' : t
+}
+
 function calcularTotalesCotizacion(items = [], descuento = 0, overrides = {}) {
   const rows = items.filter((it) => it.descripcion?.trim())
-  const isMO = (it) => String(it.tipo || '').toLowerCase().includes('mano')
+  const isMO = (it) => sanitizeTipoItem(it.tipo) === 'mano_obra'
   const margenPct = Number(overrides.margen_pct) > 0 ? Number(overrides.margen_pct) : 30
   const horasTrabajo = Math.max(0, Number(overrides.horas_trabajo) || 0)
   const costoHoraTecnico = Math.max(0, Number(overrides.costo_hora_tecnico) || 0)
@@ -82,9 +115,6 @@ const PRESUPUESTO_TOTALE_STORAGE_KEY = 'secco_presupuesto_alto_panel_totales'
 const PRESUPUESTO_TOTALE_DEFAULT = 360
 const PRESUPUESTO_TOTALE_MIN = 168
 
-const TIPOS = ['Repuesto', 'Servicio']
-const TIPO_COLOR = { 'Repuesto': '#a98225', 'Servicio': '#228b50' }
-
 // ─── Utilidades ───────────────────────────────────────────────
 function money(v) {
   return `$${Math.round(Number(v) || 0).toLocaleString('es-CL')}`
@@ -130,19 +160,11 @@ function buildResumenInternoSnapshot(totales) {
   }
 }
 
-function normalizeTipo(t) {
-  if (!t) return 'Repuesto'
-  const s = String(t).toLowerCase().trim()
-  if (s.includes('mano')) return '__MO__'
-  if (s === 'servicio' || s === 'trabajo' || s === 'extra') return 'Servicio'
-  return 'Repuesto'
-}
-
 // Separa ítems normales de la fila de mano de obra.
 // margenInicial se usa solo para ítems sin precio_unitario guardado.
 function separateItems(raw = [], margenInicial = 30) {
-  const moItems = raw.filter((it) => normalizeTipo(it.tipo) === '__MO__')
-  const rest    = raw.filter((it) => normalizeTipo(it.tipo) !== '__MO__')
+  const moItems = raw.filter((it) => sanitizeTipoItem(it.tipo) === 'mano_obra')
+  const rest    = raw.filter((it) => sanitizeTipoItem(it.tipo) !== 'mano_obra')
 
   const moTotal = moItems.reduce((sum, it) => sum + (Number(it.precio_unitario) || Number(it.mano_obra) || 0), 0)
   const moDescripcion = moItems.map((it) => it.descripcion).filter(Boolean).join(' / ')
@@ -152,7 +174,7 @@ function separateItems(raw = [], margenInicial = 30) {
     const pu = Number(it.precio_unitario) || 0  // precio final guardado (con IVA)
     return {
       _id: `${i}-${Math.random().toString(36).slice(2, 7)}`,
-      tipo: normalizeTipo(it.tipo) === '__MO__' ? 'Repuesto' : normalizeTipo(it.tipo),
+      tipo: sanitizeTipoLinea(it.tipo),
       descripcion: it.descripcion || '',
       cantidad: Number(it.cantidad) || 1,
       costo_unitario:  cb > 0 ? cb : '',
@@ -175,7 +197,7 @@ function separateItems(raw = [], margenInicial = 30) {
 function emptyRow() {
   return {
     _id: Math.random().toString(36).slice(2, 9),
-    tipo: 'Repuesto',
+    tipo: 'repuesto',
     descripcion: '',
     cantidad: 1,
     costo_unitario: '',
@@ -190,7 +212,7 @@ function rowTotal(row) {
 // Arma el array de ítems para guardar en DB (incluye M.O. al final si tiene precio)
 function itemsForDB(rows, mo) {
   const base = rows.map(({ _id, ...rest }) => ({
-    tipo: rest.tipo,
+    tipo: sanitizeTipoLinea(rest.tipo),
     descripcion: rest.descripcion || '',
     cantidad: Number(rest.cantidad) || 1,
     costo_unitario: Number(rest.costo_unitario) || 0,
@@ -200,7 +222,7 @@ function itemsForDB(rows, mo) {
     observacion: '',
   }))
   const moItem = Number(mo.precio) > 0 ? [{
-    tipo: 'Mano de obra',
+    tipo: 'mano_obra',
     descripcion: mo.descripcion || 'Mano de obra',
     cantidad: 1,
     costo_unitario: 0,
@@ -400,7 +422,7 @@ const sLabel = {
 
 // ─── SpreadsheetRow ───────────────────────────────────────────
 // Columnas editables:
-//   Tipo (Repuesto | Servicio), Descripción, Cantidad, Costo SECCO → Precio cliente (+30%) auto, Total (calc)
+//   Tipo (repuesto | servicio | trabajo), Descripción, Cantidad, Costo SECCO → Precio cliente (+30%) auto, Total (calc)
 function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onEnter, autocompletePool }) {
   const total = rowTotal(row)
   function upd(field, val) { onChange(row._id, field, val) }
@@ -429,7 +451,9 @@ function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onE
               textTransform: 'uppercase', letterSpacing: '0.4px',
             }}
           >
-            {TIPOS.map((t) => <option key={t} value={t}>{t}</option>)}
+            {TIPOS_LINEA.map((t) => (
+              <option key={t} value={t}>{TIPO_ITEM_LABELS[t]}</option>
+            ))}
           </select>
           <span style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#CCCCCC', pointerEvents: 'none' }}>▾</span>
         </div>
@@ -797,7 +821,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   function updateRow(id, field, value) {
     const next = rows.map((r) => {
       if (r._id !== id) return r
-      const updated = { ...r, [field]: value }
+      const updated = { ...r, [field]: field === 'tipo' ? sanitizeTipoLinea(value) : value }
       if (field === 'costo_unitario') {
         const cb = Number(value) || 0
         // Recalcular precio final (con IVA) usando margen real sobre precio de venta
