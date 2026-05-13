@@ -166,6 +166,16 @@ function buildResumenInternoSnapshot(totales) {
     margen_pct: totales.margen_pct,
   }
 }
+function inferMoConcepto(moItems = []) {
+  if (!moItems.length) return 'mano_obra'
+  const first = moItems[0]
+  const d = String(first.descripcion || '').trim()
+  for (const key of TIPOS_ITEM) {
+    if (d === TIPO_ITEM_LABELS[key]) return key
+  }
+  const t = sanitizeTipoItem(first.tipo)
+  return TIPOS_ITEM.includes(t) ? t : 'mano_obra'
+}
 
 // Separa ítems normales de la fila de mano de obra.
 // margenInicial se usa solo para ítems sin precio_unitario guardado.
@@ -174,7 +184,6 @@ function separateItems(raw = [], margenInicial = 30) {
   const rest    = raw.filter((it) => sanitizeTipoItem(it.tipo) !== 'mano_obra')
 
   const moTotal = moItems.reduce((sum, it) => sum + (Number(it.precio_unitario) || Number(it.mano_obra) || 0), 0)
-  const moDescripcion = moItems.map((it) => it.descripcion).filter(Boolean).join(' / ')
 
   const rows = rest.map((it, i) => {
     const cb = Number(it.costo_unitario)  || 0  // costo bruto (con IVA)
@@ -195,7 +204,7 @@ function separateItems(raw = [], margenInicial = 30) {
   return {
     rows,
     manoDeObra: {
-      descripcion: moDescripcion || '',
+      concepto: inferMoConcepto(moItems),
       precio: moTotal > 0 ? moTotal : '',
     },
   }
@@ -232,9 +241,11 @@ function itemsForDB(rows, mo) {
     urgencia: 'recomendado',
     observacion: '',
   }))
+  const moConceptoKey = TIPOS_ITEM.includes(mo?.concepto) ? mo.concepto : 'mano_obra'
+  const moDesc = TIPO_ITEM_LABELS[moConceptoKey] || 'Mano de obra'
   const moItem = Number(mo.precio) > 0 && !rowsTieneManoObra(rows) ? [{
     tipo: 'mano_obra',
-    descripcion: mo.descripcion || 'Mano de obra',
+    descripcion: moDesc,
     cantidad: 1,
     costo_unitario: 0,
     precio_unitario: Number(mo.precio),
@@ -889,7 +900,10 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   }
 
   function updateMO(field, value) {
-    const next = { ...manoDeObra, [field]: value }
+    const next = {
+      ...manoDeObra,
+      [field]: field === 'concepto' ? sanitizeTipoItem(value) : value,
+    }
     setManoDeObra(next)
     touch(null, next, null, null, null, null, null, null)
   }
@@ -1169,31 +1183,29 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                     <td style={td({ width: 110 })}>
                       <div style={{ position: 'relative' }}>
                         <select
-                          disabled
-                          value="mano_obra"
-                          aria-label="Concepto: mano de obra"
-                          title="Esta fila siempre es mano de obra en el presupuesto"
+                          value={TIPOS_ITEM.includes(manoDeObra.concepto) ? manoDeObra.concepto : 'mano_obra'}
+                          onChange={(e) => updateMO('concepto', e.target.value)}
+                          aria-label="Concepto mano de obra"
                           style={{
                             width: '100%', border: 'none', background: 'transparent', outline: 'none',
-                            fontSize: 11, fontWeight: 700, color: TIPO_COLOR.mano_obra,
-                            fontFamily: 'inherit', padding: '8px 18px 8px 8px', cursor: 'default',
+                            fontSize: 11, fontWeight: 700,
+                            color: TIPO_COLOR[TIPOS_ITEM.includes(manoDeObra.concepto) ? manoDeObra.concepto : 'mano_obra'] || '#5064c8',
+                            fontFamily: 'inherit', padding: '8px 18px 8px 8px', cursor: 'pointer',
                             appearance: 'none', WebkitAppearance: 'none',
-                            textTransform: 'uppercase', letterSpacing: '0.4px', opacity: 1,
+                            textTransform: 'uppercase', letterSpacing: '0.4px',
                           }}
                         >
-                          <option value="mano_obra">{TIPO_ITEM_LABELS.mano_obra}</option>
+                          {TIPOS_ITEM.map((t) => (
+                            <option key={t} value={t}>{TIPO_ITEM_LABELS[t]}</option>
+                          ))}
                         </select>
                         <span style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#CCCCCC', pointerEvents: 'none' }}>▾</span>
                       </div>
                     </td>
                     <td style={td({})}>
-                      <input
-                        type="text"
-                        value={manoDeObra.descripcion}
-                        onChange={(e) => updateMO('descripcion', e.target.value)}
-                        placeholder="Detalle / concepto (opcional)"
-                        style={cellInput({ color: '#5064c8' })}
-                      />
+                      <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: '#6B6B6B', fontStyle: 'italic' }}>
+                        {TIPO_ITEM_LABELS[TIPOS_ITEM.includes(manoDeObra.concepto) ? manoDeObra.concepto : 'mano_obra']}
+                      </span>
                     </td>
                     {/* Cant fija = 1 */}
                     <td style={td({ width: 52, textAlign: 'center', color: '#AAAAAA', fontSize: 12 })}>1</td>
