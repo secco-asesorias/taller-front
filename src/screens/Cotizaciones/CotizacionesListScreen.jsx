@@ -217,6 +217,13 @@ export default function CotizacionesListScreen({ onNavigate }) {
             const veh = cot.vehiculos || cot.actas?.vehiculos || cot.vista_cliente?.vehiculo_manual || {}
             const cli = cot.clientes || cot.actas?.clientes || cot.vista_cliente?.cliente_manual || {}
             const eliminando = deletingId === cot.id
+            const tieneActaVinculada = Boolean(cot.acta_id || cot.actas?.id)
+            const numeroActa = cot.actas?.numero_acta ?? null
+            const descripcionVehiculo = [veh.marca, veh.modelo, veh.patente].filter(Boolean).join(' · ')
+            const lineaVehiculo = descripcionVehiculo
+              || (tieneActaVinculada
+                ? `Vinculada a Acta${numeroActa ? ` #${numeroActa}` : ''} · sin datos cargados`
+                : 'Sin vehículo en datos')
             return (
               <div key={cot.id} className="cot-card" style={{ minHeight: 120 }}>
                 <button
@@ -232,8 +239,8 @@ export default function CotizacionesListScreen({ onNavigate }) {
                           <span style={{ color: '#6B6B6B', fontWeight: 600 }}> · {cot.vista_cliente.titulo}</span>
                         )}
                       </p>
-                      <p style={{ margin: '0 0 4px', color: '#111114', fontSize: 13, lineHeight: 1.35 }}>
-                        {[veh.marca, veh.modelo, veh.patente].filter(Boolean).join(' · ') || 'Sin vehículo en datos'}
+                      <p style={{ margin: '0 0 4px', color: descripcionVehiculo ? '#111114' : '#6B6B6B', fontSize: 13, lineHeight: 1.35, fontStyle: descripcionVehiculo ? 'normal' : 'italic' }}>
+                        {lineaVehiculo}
                       </p>
                       {cli.nombre ? (
                         <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>{cli.nombre}</p>

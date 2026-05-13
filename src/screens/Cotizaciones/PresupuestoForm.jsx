@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { cotizacionService } from '../../services/cotizacionService'
 import { generarPDFPresupuestoCliente, generarPDFPresupuestoInterno } from '../../utils/pdfPresupuesto'
+import VincularActaPanel from '../../components/cotizaciones/VincularActaPanel'
 
 // ─── Funciones de cálculo (puras) ────────────────────────────
 function precioFinalConMargen(costoBruto, margenPct) {
@@ -987,8 +988,16 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   async function handlePDF(tipo) {
     setLoading(true)
     try {
-      if (tipo === 'cliente') await generarPDFPresupuestoCliente(cotizacionLocal())
-      else await generarPDFPresupuestoInterno(cotizacionLocal())
+      if (tipo === 'cliente') {
+        const local = cotizacionLocal()
+        if (cotizacion?.id) {
+          await cotizacionService.descargarPdfCliente(cotizacion.id, local)
+        } else {
+          await generarPDFPresupuestoCliente(local)
+        }
+      } else {
+        await generarPDFPresupuestoInterno(cotizacionLocal())
+      }
     } catch (e) { alert(`Error PDF: ${e.message}`) }
     finally { setLoading(false) }
   }
@@ -1059,8 +1068,11 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     rechazada: { bg: 'rgba(255,69,58,0.10)', color: '#FF453A' },
   }[status] || { bg: '#F5F5F5', color: '#6B6B6B' }
   const vehManualMerged = { ...EMPTY_VEHICULO_MANUAL, ...(cotizacion.vista_cliente?.vehiculo_manual || {}), ...vehiculoManual }
-  const vehHeader = `${veh.marca || vehManualMerged.marca || ''} ${veh.modelo || vehManualMerged.modelo || ''}`.trim() || 'Presupuesto sin asignar'
-  const patenteHeader = veh.patente || vehManualMerged.patente || 'SIN ASIGNAR'
+  const actaVinculadaNumero = cotizacion?.actas?.numero_acta ?? null
+  const vehHeaderRaw = `${veh.marca || vehManualMerged.marca || ''} ${veh.modelo || vehManualMerged.modelo || ''}`.trim()
+  const vehHeader = vehHeaderRaw
+    || (actaVinculadaNumero ? `Acta #${actaVinculadaNumero}` : 'Presupuesto sin asignar')
+  const patenteHeader = veh.patente || vehManualMerged.patente || (actaVinculadaNumero ? '—' : 'SIN ASIGNAR')
   const moVentaNeta = ventaMoCalculada
   const tieneAsignacion = Boolean(cotizacion.acta_id || cotizacion.vehiculo_id || cotizacion.actas?.id || cotizacion.vehiculos?.id)
   const esSoloLocal = !cotizacion?.id
@@ -1443,82 +1455,113 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                 placeholder="Nota interna..."
                 style={{ flex: 1, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '6px 8px', fontFamily: 'inherit', outline: 'none', resize: 'none', color: '#111114' }} />
             </div>
+          </div>
 
-            {/* Acciones */}
-            <div style={{ padding: '0 16px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {status === 'sin_asignar' && (
-                <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(17,17,20,0.04)', border: '1px solid #E0E0E0', borderRadius: 8 }}>
-                  <p style={{ margin: 0, fontSize: 12, color: '#6B6B6B', fontWeight: 600 }}>
-                    Presupuesto sin asignar: puedes editarlo, exportar PDF y enviarlo. Para aprobarlo y generar OT debe asociarse a un acta/vehículo.
-                  </p>
-                </div>
-              )}
-              {status !== 'rechazada' && status !== 'aprobada' && [
-                { label: 'PDF cliente',  fn: () => handlePDF('cliente'),    s: { bg: '#FFF', color: '#111114', border: '1px solid #E0E0E0' } },
-                { label: 'PDF interno',  fn: () => handlePDF('interno'),    s: { bg: '#FFF', color: '#6B6B6B', border: '1px solid #E0E0E0' } },
-                { label: 'Marcar lista', fn: () => handleAction('lista'),   s: { bg: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' } },
-                { label: loading ? '…' : 'Enviar →', fn: () => handleAction('enviada'), s: { bg: '#a98225', color: '#FFF', border: 'none' } },
-              ].map(({ label, fn, s }) => (
-                <button key={label} type="button" onClick={fn} disabled={loading}
-                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: s.bg, color: s.color, border: s.border, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {label}
-                </button>
-              ))}
+          {/* ── Acciones (fijas al pie, fuera del scroll de totales) ── */}
+          <div style={{
+            flexShrink: 0,
+            padding: '10px 16px 14px',
+            display: 'flex',
+            gap: 8,
+            flexWrap: 'wrap',
+            background: '#FFFFFF',
+            borderTop: '1px solid #E0E0E0',
+            boxShadow: '0 -2px 6px rgba(0,0,0,0.04)',
+          }}>
+            {status === 'sin_asignar' && (
+              <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(17,17,20,0.04)', border: '1px solid #E0E0E0', borderRadius: 8 }}>
+                <p style={{ margin: 0, fontSize: 12, color: '#6B6B6B', fontWeight: 600 }}>
+                  Presupuesto sin asignar: puedes editarlo, exportar PDF y enviarlo. Para aprobarlo y generar OT debe asociarse a un acta/vehículo.
+                </p>
+              </div>
+            )}
+            {status !== 'rechazada' && status !== 'aprobada' && [
+              { label: 'PDF cliente',  fn: () => handlePDF('cliente'),    s: { bg: '#FFF', color: '#111114', border: '1px solid #E0E0E0' } },
+              { label: 'PDF interno',  fn: () => handlePDF('interno'),    s: { bg: '#FFF', color: '#6B6B6B', border: '1px solid #E0E0E0' } },
+              { label: 'Marcar lista', fn: () => handleAction('lista'),   s: { bg: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' } },
+              { label: loading ? '…' : 'Enviar →', fn: () => handleAction('enviada'), s: { bg: '#a98225', color: '#FFF', border: 'none' } },
+            ].map(({ label, fn, s }) => (
+              <button key={label} type="button" onClick={fn} disabled={loading}
+                style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: s.bg, color: s.color, border: s.border, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {label}
+              </button>
+            ))}
 
-              {/* Respuesta del cliente — visible cuando está enviada */}
-              {status === 'enviada' && !tieneAsignacion && (
-                <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(169,130,37,0.06)', border: '1px solid rgba(169,130,37,0.22)', borderRadius: 8 }}>
-                  <p style={{ margin: 0, fontSize: 12, color: '#a98225', fontWeight: 600 }}>
-                    Presupuesto enviado sin asignar: sigue disponible para asociarlo a un acta/vehículo. La aprobación queda habilitada después de asignarlo.
-                  </p>
-                </div>
-              )}
-              {status === 'enviada' && tieneAsignacion && (
-                <>
-                  <div style={{ width: '100%', height: 1, background: '#F2F2F2', margin: '4px 0' }} />
-                  <span style={{ fontSize: 11, color: '#6B6B6B', alignSelf: 'center', flex: 1 }}>Respuesta del cliente:</span>
-                  <button type="button" onClick={handleAprobar} disabled={loading}
-                    style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: '#228b50', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    {loading ? '…' : '✓ Aprobado'}
-                  </button>
-                  <button type="button" onClick={() => setShowRechazo((v) => !v)} disabled={loading}
-                    style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: showRechazo ? 'rgba(255,69,58,0.12)' : '#FFF', color: '#FF453A', border: '1px solid rgba(255,69,58,0.35)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    ✗ Rechazado
-                  </button>
-                  {showRechazo && (
-                    <div style={{ width: '100%', display: 'flex', gap: 8, marginTop: 4 }}>
-                      <input
-                        type="text"
-                        value={motivoRechazo}
-                        onChange={(e) => setMotivoRechazo(e.target.value)}
-                        placeholder="Motivo del rechazo..."
-                        style={{ flex: 1, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '6px 10px', fontFamily: 'inherit', outline: 'none', color: '#111114' }}
-                        onKeyDown={(e) => e.key === 'Enter' && handleRechazar()}
-                      />
-                      <button type="button" onClick={handleRechazar} disabled={loading}
-                        style={{ padding: '6px 14px', fontSize: 12, fontWeight: 700, background: '#FF453A', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        Confirmar
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* Estado final: aprobado con acceso a OT */}
-              {status === 'aprobada' && onAbrirOT && (
+            {/* Respuesta del cliente — visible cuando está enviada */}
+            {status === 'enviada' && !tieneAsignacion && (
+              <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(169,130,37,0.06)', border: '1px solid rgba(169,130,37,0.22)', borderRadius: 8 }}>
+                <p style={{ margin: 0, fontSize: 12, color: '#a98225', fontWeight: 600 }}>
+                  Presupuesto enviado sin asignar: sigue disponible para asociarlo a un acta/vehículo. La aprobación queda habilitada después de asignarlo.
+                </p>
+              </div>
+            )}
+            {status === 'enviada' && tieneAsignacion && (
+              <>
+                <div style={{ width: '100%', height: 1, background: '#F2F2F2', margin: '4px 0' }} />
+                <span style={{ fontSize: 11, color: '#6B6B6B', alignSelf: 'center', flex: 1 }}>Respuesta del cliente:</span>
                 <button type="button" onClick={handleAprobar} disabled={loading}
                   style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: '#228b50', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Ver OT →
+                  {loading ? '…' : '✓ Aprobado'}
                 </button>
-              )}
+                <button type="button" onClick={() => setShowRechazo((v) => !v)} disabled={loading}
+                  style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: showRechazo ? 'rgba(255,69,58,0.12)' : '#FFF', color: '#FF453A', border: '1px solid rgba(255,69,58,0.35)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  ✗ Rechazado
+                </button>
+                {showRechazo && (
+                  <div style={{ width: '100%', display: 'flex', gap: 8, marginTop: 4 }}>
+                    <input
+                      type="text"
+                      value={motivoRechazo}
+                      onChange={(e) => setMotivoRechazo(e.target.value)}
+                      placeholder="Motivo del rechazo..."
+                      style={{ flex: 1, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '6px 10px', fontFamily: 'inherit', outline: 'none', color: '#111114' }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleRechazar()}
+                    />
+                    <button type="button" onClick={handleRechazar} disabled={loading}
+                      style={{ padding: '6px 14px', fontSize: 12, fontWeight: 700, background: '#FF453A', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Confirmar
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
 
-              {/* Estado final: rechazado */}
-              {status === 'rechazada' && (
+            {/* Estado final: aprobado con acceso a OT */}
+            {status === 'aprobada' && (
+              <>
+                <button type="button" onClick={() => handlePDF('cliente')} disabled={loading}
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#111114', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  PDF cliente
+                </button>
+                <button type="button" onClick={() => handlePDF('interno')} disabled={loading}
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#6B6B6B', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  PDF interno
+                </button>
+                {onAbrirOT && (
+                  <button type="button" onClick={handleAprobar} disabled={loading}
+                    style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: '#228b50', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Ver OT →
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Estado final: rechazado */}
+            {status === 'rechazada' && (
+              <>
                 <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,69,58,0.06)', border: '1px solid rgba(255,69,58,0.2)', borderRadius: 8 }}>
                   <p style={{ margin: 0, fontSize: 12, color: '#FF453A', fontWeight: 600 }}>Cotización rechazada</p>
                 </div>
-              )}
-            </div>
+                <button type="button" onClick={() => handlePDF('cliente')} disabled={loading}
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#111114', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  PDF cliente
+                </button>
+                <button type="button" onClick={() => handlePDF('interno')} disabled={loading}
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#6B6B6B', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  PDF interno
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -1542,6 +1585,16 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                 </p>
               </div>
             )}
+            <VincularActaPanel
+              cotizacion={cotizacion}
+              disabled={loading}
+              onVinculada={(full) => {
+                setCotizacion(full)
+                cotizacionIdRef.current = full?.id || cotizacionIdRef.current
+                cotizacionSnapRef.current = full
+              }}
+              onError={(msg) => alert(msg)}
+            />
             <div style={{ padding: '14px 18px', borderBottom: '1px solid #E0E0E0', background: '#FFFFFF' }}>
               <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#111114' }}>Cliente y vehículo</p>
               <p style={{ margin: '0 0 12px', fontSize: 11, color: '#6B6B6B', lineHeight: 1.45 }}>
