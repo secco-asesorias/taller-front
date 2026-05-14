@@ -25,6 +25,8 @@ const TIPO_COLOR = {
   mano_obra: '#5856D6',
 }
 
+const TIPOS_LINEA = TIPOS_ITEM.filter((t) => t !== 'mano_obra')
+
 function sanitizeTipoItem(raw) {
   const s = String(raw ?? '').toLowerCase().trim().replace(/\s+/g, '_')
   if (TIPOS_ITEM.includes(s)) return s
@@ -166,14 +168,13 @@ function buildResumenInternoSnapshot(totales) {
     margen_pct: totales.margen_pct,
   }
 }
-function inferMoConcepto(moItems = []) {
-  if (!moItems.length) return 'mano_obra'
-  const first = moItems[0]
-  const d = String(first.descripcion || '').trim()
+function inferMoConceptoFromApiItem(it) {
+  if (!it) return 'mano_obra'
+  const d = String(it.descripcion || '').trim()
   for (const key of TIPOS_ITEM) {
     if (d === TIPO_ITEM_LABELS[key]) return key
   }
-  const t = sanitizeTipoItem(first.tipo)
+  const t = sanitizeTipoItem(it.tipo)
   return TIPOS_ITEM.includes(t) ? t : 'mano_obra'
 }
 
@@ -182,8 +183,6 @@ function inferMoConcepto(moItems = []) {
 function separateItems(raw = [], margenInicial = 30) {
   const moItems = raw.filter((it) => sanitizeTipoItem(it.tipo) === 'mano_obra')
   const rest    = raw.filter((it) => sanitizeTipoItem(it.tipo) !== 'mano_obra')
-
-  const moTotal = moItems.reduce((sum, it) => sum + (Number(it.precio_unitario) || Number(it.mano_obra) || 0), 0)
 
   const rows = rest.map((it, i) => {
     const cb = Number(it.costo_unitario)  || 0  // costo bruto (con IVA)
@@ -201,12 +200,25 @@ function separateItems(raw = [], margenInicial = 30) {
 
   if (!rows.length) rows.push(emptyRow())
 
+  const manoObraRows = moItems.length
+    ? moItems.map((it, idx) => ({
+      _id: `mo-${idx}-${Math.random().toString(36).slice(2, 9)}`,
+      concepto: inferMoConceptoFromApiItem(it),
+      precio: (Number(it.precio_unitario) || Number(it.mano_obra) || '') === 0 ? '' : (Number(it.precio_unitario) || Number(it.mano_obra) || ''),
+    }))
+    : [emptyMoRow()]
+
   return {
     rows,
-    manoDeObra: {
-      concepto: inferMoConcepto(moItems),
-      precio: moTotal > 0 ? moTotal : '',
-    },
+    manoObraRows,
+  }
+}
+
+function emptyMoRow() {
+  return {
+    _id: `mo-${Math.random().toString(36).slice(2, 9)}`,
+    concepto: 'mano_obra',
+    precio: '',
   }
 }
 
@@ -225,35 +237,58 @@ function rowTotal(row) {
   return Math.round(Number(row.cantidad || 1) * Number(row.precio_unitario || 0))
 }
 
-function rowsTieneManoObra(rows) {
-  return rows.some((r) => sanitizeTipoItem(r.tipo) === 'mano_obra')
-}
+function itemsForDB(rows, manoObraRows, horasTrabajoNum = 0, valorHoraClienteMo = 0) {
+  const ht = Math.max(0, Number(horasTrabajoNum) || 0)
+  const vh = Number(valorHoraClienteMo) || 0
+  const horasMode = ht > 0 && vh > 0
+  const ventaTotalHoras = horasMode ? Math.round(ht * vh) : 0
 
-// Arma el array de ítems para guardar en DB (incluye M.O. al final si tiene precio)
-function itemsForDB(rows, mo) {
-  const base = rows.map(({ _id, ...rest }) => ({
-    tipo: sanitizeTipoItem(rest.tipo),
-    descripcion: rest.descripcion || '',
-    cantidad: Number(rest.cantidad) || 1,
-    costo_unitario: Number(rest.costo_unitario) || 0,
-    precio_unitario: Number(rest.precio_unitario) || 0,
+  const base = rows.map((row) => ({
+    tipo: sanitizeTipoLinea(row.tipo),
+    descripcion: row.descripcion || '',
+    cantidad: Number(row.cantidad) || 1,
+    costo_unitario: Number(row.costo_unitario) || 0,
+    precio_unitario: Number(row.precio_unitario) || 0,
     mano_obra: 0,
     urgencia: 'recomendado',
     observacion: '',
   }))
-  const moConceptoKey = TIPOS_ITEM.includes(mo?.concepto) ? mo.concepto : 'mano_obra'
-  const moDesc = TIPO_ITEM_LABELS[moConceptoKey] || 'Mano de obra'
-  const moItem = Number(mo.precio) > 0 && !rowsTieneManoObra(rows) ? [{
-    tipo: 'mano_obra',
-    descripcion: moDesc,
-    cantidad: 1,
-    costo_unitario: 0,
-    precio_unitario: Number(mo.precio),
-    mano_obra: Number(mo.precio),
-    urgencia: 'necesario',
-    observacion: '',
-  }] : []
-  return [...base, ...moItem]
+
+  const list = Array.isArray(manoObraRows) ? manoObraRows : []
+  let moApiItems = []
+  if (horasMode && ventaTotalHoras > 0) {
+    const m0 = list[0] || { concepto: 'mano_obra' }
+    const moConceptoKey = TIPOS_ITEM.includes(m0.concepto) ? m0.concepto : 'mano_obra'
+    const moDesc = TIPO_ITEM_LABELS[moConceptoKey] || 'Mano de obra'
+    moApiItems = [{
+      tipo: 'mano_obra',
+      descripcion: moDesc,
+      cantidad: 1,
+      costo_unitario: 0,
+      precio_unitario: ventaTotalHoras,
+      mano_obra: ventaTotalHoras,
+      urgencia: 'necesario',
+      observacion: '',
+    }]
+  } else {
+    moApiItems = list
+      .filter((m) => Number(m.precio) > 0)
+      .map((m) => {
+        const moConceptoKey = TIPOS_ITEM.includes(m.concepto) ? m.concepto : 'mano_obra'
+        const p = Number(m.precio) || 0
+        return {
+          tipo: 'mano_obra',
+          descripcion: TIPO_ITEM_LABELS[moConceptoKey] || 'Mano de obra',
+          cantidad: 1,
+          costo_unitario: 0,
+          precio_unitario: p,
+          mano_obra: p,
+          urgencia: 'necesario',
+          observacion: '',
+        }
+      })
+  }
+  return [...base, ...moApiItems]
 }
 
 const ITEM_API_PLACEHOLDER = {
@@ -271,8 +306,8 @@ const EMPTY_CLIENTE_MANUAL = { nombre: '', telefono: '', email: '' }
 const EMPTY_VEHICULO_MANUAL = { marca: '', modelo: '', patente: '', anio: '' }
 
 /** Ítems listos para API: sin filas vacías (Zod exige descripción). */
-function itemsGuardados(rows, mo) {
-  const raw = itemsForDB(rows, mo).filter((it) => String(it.descripcion || '').trim())
+function itemsGuardados(rows, manoObraRows, horasTrabajoNum, valorHoraClienteMo) {
+  const raw = itemsForDB(rows, manoObraRows, horasTrabajoNum, valorHoraClienteMo).filter((it) => String(it.descripcion || '').trim())
   return raw.length ? raw : [ITEM_API_PLACEHOLDER]
 }
 
@@ -443,10 +478,10 @@ const sLabel = {
 }
 
 // ─── SpreadsheetRow ───────────────────────────────────────────
-// Columna «Concepto»: select con valores del API (repuesto, servicio, trabajo, mano_obra).
+// Columna «Concepto»: repuesto, servicio, trabajo (mano_obra va en el bloque M.O.).
 function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onEnter, autocompletePool }) {
   const total = rowTotal(row)
-  const tipoSelectValue = TIPOS_ITEM.includes(row.tipo) ? row.tipo : 'repuesto'
+  const tipoSelectValue = TIPOS_LINEA.includes(row.tipo) ? row.tipo : 'repuesto'
   function upd(field, val) { onChange(row._id, field, val) }
 
   return (
@@ -473,7 +508,7 @@ function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onE
               textTransform: 'uppercase', letterSpacing: '0.4px',
             }}
           >
-            {TIPOS_ITEM.map((t) => (
+            {TIPOS_LINEA.map((t) => (
               <option key={t} value={t}>{TIPO_ITEM_LABELS[t]}</option>
             ))}
           </select>
@@ -601,8 +636,8 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   const margenInicial = cotizacionInicial.vista_cliente?.margen_pct ?? 30
   const init = useMemo(() => separateItems(cotizacionInicial.items, margenInicial), [])
 
-  const [rows, setRows]           = useState(() => init.rows.map((r) => ({ ...r, tipo: sanitizeTipoItem(r.tipo) })))
-  const [manoDeObra, setManoDeObra] = useState(init.manoDeObra)
+  const [rows, setRows]           = useState(() => init.rows.map((r) => ({ ...r, tipo: sanitizeTipoLinea(r.tipo) })))
+  const [manoObraRows, setManoObraRows] = useState(init.manoObraRows)
   const [margen, setMargen]       = useState(cotizacionInicial.vista_cliente?.margen_pct ?? 30)
   const [descuento, setDescuento] = useState(cotizacionInicial.vista_cliente?.descuento_valor ?? cotizacionInicial.descuento ?? 0)
   const [descuentoTipo, setDescuentoTipo] = useState(cotizacionInicial.vista_cliente?.descuento_tipo || 'monto')
@@ -615,7 +650,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     const tarifaGuardada = Number(cotizacionInicial.vista_cliente?.valor_hora_cliente_mo || 0)
     if (tarifaGuardada > 0) return tarifaGuardada
     const horas = Number(cotizacionInicial.vista_cliente?.horas_trabajo ?? cotizacionInicial.diagnosticos?.horas_estimadas ?? 0)
-    const ventaMoInicial = Number(init.manoDeObra.precio || 0)
+    const ventaMoInicial = init.manoObraRows.reduce((s, m) => s + (Number(m.precio) || 0), 0)
     return horas > 0 && ventaMoInicial > 0 ? ventaMoInicial / horas : 0
   })
   const [activeRow, setActiveRow] = useState(null)
@@ -677,12 +712,13 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   }), [cotizacion, clienteManual, vehiculoManual])
   const horasTrabajoNum = useMemo(() => Math.max(0, toNumber(horasTrabajo)), [horasTrabajo])
   const ventaMoCalculada = useMemo(() => {
-    if (horasTrabajoNum > 0 && valorHoraClienteMo > 0) {
-      return Math.round(horasTrabajoNum * valorHoraClienteMo)
+    if (horasTrabajoNum > 0 && Number(valorHoraClienteMo) > 0) {
+      return Math.round(horasTrabajoNum * Number(valorHoraClienteMo))
     }
-    return Math.round(Number(manoDeObra.precio) || 0)
-  }, [horasTrabajoNum, valorHoraClienteMo, manoDeObra.precio])
-  const manoDeObraCalculada = useMemo(() => ({ ...manoDeObra, precio: ventaMoCalculada }), [manoDeObra, ventaMoCalculada])
+    return Math.round(manoObraRows.reduce((s, m) => s + (Number(m.precio) || 0), 0))
+  }, [horasTrabajoNum, valorHoraClienteMo, manoObraRows])
+
+  const horasModeMo = horasTrabajoNum > 0 && Number(valorHoraClienteMo) > 0
 
   useEffect(() => {
     const h = () => setIsWide(window.innerWidth >= 900)
@@ -692,13 +728,17 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
 
   // ── Totales ────────────────────────────────────────────────
   const totales = useMemo(() => {
-    return calcularTotalesCotizacion(itemsForDB(rows, manoDeObraCalculada), descuento, {
-      descuento_tipo: descuentoTipo,
-      margen_pct: margen,
-      horas_trabajo: horasTrabajo,
-      costo_hora_tecnico: costoHoraTecnico,
-    })
-  }, [rows, manoDeObraCalculada, descuento, descuentoTipo, margen, horasTrabajo, costoHoraTecnico])
+    return calcularTotalesCotizacion(
+      itemsForDB(rows, manoObraRows, horasTrabajoNum, Number(valorHoraClienteMo) || 0),
+      descuento,
+      {
+        descuento_tipo: descuentoTipo,
+        margen_pct: margen,
+        horas_trabajo: horasTrabajo,
+        costo_hora_tecnico: costoHoraTecnico,
+      },
+    )
+  }, [rows, manoObraRows, descuento, descuentoTipo, margen, horasTrabajo, costoHoraTecnico, valorHoraClienteMo, horasTrabajoNum])
   const totalCobroCliente = useMemo(() => totales.total_final_cliente ?? totalClienteCobro(totales.total), [totales.total, totales.total_final_cliente])
 
   function buildVistaClientePayload(totalesActuales = totales) {
@@ -730,7 +770,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       const base = await cotizacionService.crearBorrador()
       const id = base?.id
       if (!id) throw new Error('No se obtuvo id al crear el borrador')
-      const items = itemsGuardados(rows, manoDeObraCalculada)
+      const items = itemsGuardados(rows, manoObraRows, horasTrabajoNum, Number(valorHoraClienteMo) || 0)
       await cotizacionService.actualizar(id, {
         items,
         descuento,
@@ -769,13 +809,9 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       }
       setSaveStatus('saving')
       try {
-        const horasTrabajoActual = Math.max(0, toNumber(ht))
-        const tarifaHoraClienteActual = Number((vhcm ?? valorHoraClienteMo) || 0)
-        const valorMoActual = horasTrabajoActual > 0 && tarifaHoraClienteActual > 0
-          ? Math.round(horasTrabajoActual * tarifaHoraClienteActual)
-          : Math.round(Number(mo.precio) || 0)
-        const manoDeObraActual = { ...mo, precio: valorMoActual }
-        const totalesActuales = calcularTotalesCotizacion(itemsForDB(r, manoDeObraActual), nd, {
+        const htNum = Math.max(0, toNumber(ht))
+        const vhNum = Number((vhcm ?? valorHoraClienteMo) || 0)
+        const totalesActuales = calcularTotalesCotizacion(itemsForDB(r, mo, htNum, vhNum), nd, {
           descuento_tipo: ndt,
           margen_pct: mg,
           horas_trabajo: ht,
@@ -784,7 +820,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
         const snap = cotizacionSnapRef.current || {}
         const vcBase = snap.vista_cliente || {}
         await cotizacionService.actualizar(id, {
-          items: itemsGuardados(r, manoDeObraActual),
+          items: itemsGuardados(r, mo, htNum, vhNum),
           descuento: nd, descuento_tipo: ndt,
           notas: nn, notas_internas: nni,
           vista_cliente: {
@@ -794,7 +830,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
             margen_pct: mg,
             horas_trabajo: toNumber(ht),
             costo_hora_tecnico: toNumber(cht),
-            valor_hora_cliente_mo: tarifaHoraClienteActual,
+            valor_hora_cliente_mo: vhNum,
             resumen_interno: buildResumenInternoSnapshot(totalesActuales),
             tipo_presupuesto: vcBase.tipo_presupuesto || snap.tipo_presupuesto || 'final',
             cliente_manual: { ...EMPTY_CLIENTE_MANUAL, ...clienteManualRef.current },
@@ -809,7 +845,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   function touch(r, mo, nd, ndt, nn, nni, nt, mg, ht, cht, vhcm) {
     scheduleAutosave(
       r   ?? rows,
-      mo  ?? manoDeObra,
+      mo  ?? manoObraRows,
       nd  ?? descuento,
       ndt ?? descuentoTipo,
       nn  ?? notas,
@@ -844,7 +880,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   function updateRow(id, field, value) {
     const next = rows.map((r) => {
       if (r._id !== id) return r
-      const updated = { ...r, [field]: field === 'tipo' ? sanitizeTipoItem(value) : value }
+      const updated = { ...r, [field]: field === 'tipo' ? sanitizeTipoLinea(value) : value }
       if (field === 'costo_unitario') {
         const cb = Number(value) || 0
         // Recalcular precio final (con IVA) usando margen real sobre precio de venta
@@ -899,13 +935,32 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     }
   }
 
-  function updateMO(field, value) {
-    const next = {
-      ...manoDeObra,
-      [field]: field === 'concepto' ? sanitizeTipoItem(value) : value,
-    }
-    setManoDeObra(next)
-    touch(null, next, null, null, null, null, null, null)
+  function updateManoObraRow(id, field, value) {
+    setManoObraRows((prev) => {
+      const next = prev.map((m) => {
+        if (m._id !== id) return m
+        const v = field === 'concepto' ? sanitizeTipoItem(value) : value
+        return { ...m, [field]: v }
+      })
+      touch(null, next, null, null, null, null, null, null)
+      return next
+    })
+  }
+
+  function addManoObraRow() {
+    setManoObraRows((prev) => {
+      const next = [...prev, emptyMoRow()]
+      touch(null, next, null, null, null, null, null, null)
+      return next
+    })
+  }
+
+  function deleteManoObraRow(id) {
+    setManoObraRows((prev) => {
+      const next = prev.length > 1 ? prev.filter((m) => m._id !== id) : [emptyMoRow()]
+      touch(null, next, null, null, null, null, null, null)
+      return next
+    })
   }
 
   function handleMargenChange(val) {
@@ -927,7 +982,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       clearTimeout(saveTimer.current)
       const persisted = await ensurePersistida()
       await cotizacionService.actualizar(persisted.id, {
-        items: itemsGuardados(rows, manoDeObraCalculada),
+        items: itemsGuardados(rows, manoObraRows, horasTrabajoNum, Number(valorHoraClienteMo) || 0),
         descuento, descuento_tipo: descuentoTipo,
         notas, notas_internas: notasInternas,
         vista_cliente: buildVistaClientePayload(),
@@ -946,7 +1001,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       clearTimeout(saveTimer.current)
       const persisted = await ensurePersistida()
       await cotizacionService.actualizar(persisted.id, {
-        items: itemsGuardados(rows, manoDeObraCalculada),
+        items: itemsGuardados(rows, manoObraRows, horasTrabajoNum, Number(valorHoraClienteMo) || 0),
         descuento, descuento_tipo: descuentoTipo,
         notas, notas_internas: notasInternas,
         vista_cliente: buildVistaClientePayload(),
@@ -976,7 +1031,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   function cotizacionLocal() {
     return {
       ...cotizacion,
-      items: itemsGuardados(rows, manoDeObraCalculada),
+      items: itemsGuardados(rows, manoObraRows, horasTrabajoNum, Number(valorHoraClienteMo) || 0),
       descuento: totales.descuento,
       notas,
       notas_internas: notasInternas,
@@ -1062,7 +1117,6 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   const vehManualMerged = { ...EMPTY_VEHICULO_MANUAL, ...(cotizacion.vista_cliente?.vehiculo_manual || {}), ...vehiculoManual }
   const vehHeader = `${veh.marca || vehManualMerged.marca || ''} ${veh.modelo || vehManualMerged.modelo || ''}`.trim() || 'Presupuesto sin asignar'
   const patenteHeader = veh.patente || vehManualMerged.patente || 'SIN ASIGNAR'
-  const moVentaNeta = ventaMoCalculada
   const tieneAsignacion = Boolean(cotizacion.acta_id || cotizacion.vehiculo_id || cotizacion.actas?.id || cotizacion.vehiculos?.id)
   const esSoloLocal = !cotizacion?.id
 
@@ -1174,71 +1228,127 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Agregar ítem
             </button>
 
-            {/* ── Fila fija: Mano de obra ───────────────────── */}
+            {/* ── Mano de obra (una o más filas) ─────────────── */}
             <div style={{ margin: '8px 0 0', borderTop: '1.5px dashed #E0E0E0' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <tbody>
-                  <tr style={{ background: '#F8F6FF' }}>
-                    <td style={td({ width: 28, textAlign: 'center', color: '#AAAAAA', fontSize: 10, fontWeight: 700 })}>M.O.</td>
-                    <td style={td({ width: 110 })}>
-                      <div style={{ position: 'relative' }}>
-                        <select
-                          value={TIPOS_ITEM.includes(manoDeObra.concepto) ? manoDeObra.concepto : 'mano_obra'}
-                          onChange={(e) => updateMO('concepto', e.target.value)}
-                          aria-label="Concepto mano de obra"
-                          style={{
-                            width: '100%', border: 'none', background: 'transparent', outline: 'none',
-                            fontSize: 11, fontWeight: 700,
-                            color: TIPO_COLOR[TIPOS_ITEM.includes(manoDeObra.concepto) ? manoDeObra.concepto : 'mano_obra'] || '#5064c8',
-                            fontFamily: 'inherit', padding: '8px 18px 8px 8px', cursor: 'pointer',
-                            appearance: 'none', WebkitAppearance: 'none',
-                            textTransform: 'uppercase', letterSpacing: '0.4px',
-                          }}
-                        >
-                          {TIPOS_ITEM.map((t) => (
-                            <option key={t} value={t}>{TIPO_ITEM_LABELS[t]}</option>
-                          ))}
-                        </select>
-                        <span style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#CCCCCC', pointerEvents: 'none' }}>▾</span>
-                      </div>
-                    </td>
-                    <td style={td({})}>
-                      <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: '#6B6B6B', fontStyle: 'italic' }}>
-                        {TIPO_ITEM_LABELS[TIPOS_ITEM.includes(manoDeObra.concepto) ? manoDeObra.concepto : 'mano_obra']}
-                      </span>
-                    </td>
-                    {/* Cant fija = 1 */}
-                    <td style={td({ width: 52, textAlign: 'center', color: '#AAAAAA', fontSize: 12 })}>1</td>
-                    {/* Costo real M.O. = horas × costo hora */}
-                    <td style={td({ width: 100 })}>
-                      <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: totales.costo_mo_real > 0 ? '#5064c8' : '#DDDDDD', textAlign: 'right', fontWeight: 600 }}>
-                        {totales.costo_mo_real > 0 ? money(totales.costo_mo_real) : '—'}
-                      </span>
-                    </td>
-                    {/* Venta M.O. neta cobrada al cliente */}
-                    <td style={td({ width: 100 })}>
-                      <CurrencyInput
-                        value={ventaMoCalculada}
-                        onChange={(val) => {
-                          updateMO('precio', val)
-                          const total = Number(val) || 0
-                          const nuevaTarifa = horasTrabajoNum > 0 ? total / horasTrabajoNum : 0
-                          setValorHoraClienteMo(nuevaTarifa)
-                          touch(null, { ...manoDeObra, precio: val }, null, null, null, null, null, null, null, null, nuevaTarifa)
-                        }}
-                        style={{ color: '#5064c8', fontWeight: 600, textAlign: 'right' }}
-                      />
-                    </td>
-                    {/* Total M.O. = venta neta + IVA */}
-                    <td style={td({ width: 100, textAlign: 'right', paddingRight: 10 })}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: moVentaNeta > 0 ? '#5064c8' : '#DDDDDD' }}>
-                        {moVentaNeta > 0 ? money(totales.mo_con_iva) : '—'}
-                      </span>
-                    </td>
-                    <td style={td({ width: 28 })} />
-                  </tr>
+                  {manoObraRows.map((mo, moIdx) => {
+                    const conceptKey = TIPOS_ITEM.includes(mo.concepto) ? mo.concepto : 'mano_obra'
+                    const precioNeta = Number(mo.precio) || 0
+                    const totalFilaIva = Math.round(precioNeta * 1.19)
+                    const precioFieldHoras = horasModeMo && moIdx === 0
+                    const showCostoSecco = moIdx === 0 && totales.costo_mo_real > 0
+                    return (
+                      <tr key={mo._id} style={{ background: '#F8F6FF' }}>
+                        <td style={td({ width: 28, textAlign: 'center', color: '#AAAAAA', fontSize: 10, fontWeight: 700 })}>
+                          {`M.${moIdx + 1}`}
+                        </td>
+                        <td style={td({ width: 110 })}>
+                          <div style={{ position: 'relative' }}>
+                            <select
+                              value={conceptKey}
+                              onChange={(e) => updateManoObraRow(mo._id, 'concepto', e.target.value)}
+                              aria-label={`Concepto mano de obra ${moIdx + 1}`}
+                              style={{
+                                width: '100%', border: 'none', background: 'transparent', outline: 'none',
+                                fontSize: 11, fontWeight: 700,
+                                color: TIPO_COLOR[conceptKey] || '#5064c8',
+                                fontFamily: 'inherit', padding: '8px 18px 8px 8px', cursor: 'pointer',
+                                appearance: 'none', WebkitAppearance: 'none',
+                                textTransform: 'uppercase', letterSpacing: '0.4px',
+                              }}
+                            >
+                              {TIPOS_ITEM.map((t) => (
+                                <option key={t} value={t}>{TIPO_ITEM_LABELS[t]}</option>
+                              ))}
+                            </select>
+                            <span style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#CCCCCC', pointerEvents: 'none' }}>▾</span>
+                          </div>
+                        </td>
+                        <td style={td({})}>
+                          <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: '#6B6B6B', fontStyle: 'italic' }}>
+                            {TIPO_ITEM_LABELS[conceptKey]}
+                          </span>
+                        </td>
+                        <td style={td({ width: 52, textAlign: 'center', color: '#AAAAAA', fontSize: 12 })}>1</td>
+                        <td style={td({ width: 100 })}>
+                          <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: showCostoSecco ? '#5064c8' : '#DDDDDD', textAlign: 'right', fontWeight: 600 }}>
+                            {showCostoSecco ? money(totales.costo_mo_real) : '—'}
+                          </span>
+                        </td>
+                        <td style={td({ width: 100 })}>
+                          {precioFieldHoras ? (
+                            <CurrencyInput
+                              value={ventaMoCalculada}
+                              onChange={(val) => {
+                                const total = Number(val) || 0
+                                const nuevaTarifa = horasTrabajoNum > 0 ? total / horasTrabajoNum : 0
+                                setValorHoraClienteMo(nuevaTarifa)
+                                setManoObraRows((prev) => {
+                                  const next = prev.map((m, i) => (i === 0 ? { ...m, precio: val } : m))
+                                  touch(null, next, null, null, null, null, null, null, null, null, nuevaTarifa)
+                                  return next
+                                })
+                              }}
+                              style={{ color: '#5064c8', fontWeight: 600, textAlign: 'right' }}
+                            />
+                          ) : horasModeMo && moIdx > 0 ? (
+                            <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: '#CCCCCC', textAlign: 'right' }}>—</span>
+                          ) : (
+                            <CurrencyInput
+                              value={mo.precio}
+                              onChange={(val) => updateManoObraRow(mo._id, 'precio', val)}
+                              style={{ color: '#5064c8', fontWeight: 600, textAlign: 'right' }}
+                            />
+                          )}
+                        </td>
+                        <td style={td({ width: 100, textAlign: 'right', paddingRight: 10 })}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: (horasModeMo && moIdx === 0 && ventaMoCalculada > 0) || (!horasModeMo && precioNeta > 0) ? '#5064c8' : '#DDDDDD' }}>
+                            {horasModeMo && moIdx === 0 && ventaMoCalculada > 0
+                              ? money(totales.mo_con_iva)
+                              : !horasModeMo && precioNeta > 0
+                                ? money(totalFilaIva)
+                                : '—'}
+                          </span>
+                        </td>
+                        <td style={td({ width: 28, textAlign: 'center' })}>
+                          <button
+                            type="button"
+                            tabIndex={-1}
+                            disabled={manoObraRows.length <= 1}
+                            onClick={() => deleteManoObraRow(mo._id)}
+                            title="Quitar línea"
+                            style={{
+                              background: 'none', border: 'none', padding: '2px 4px',
+                              cursor: manoObraRows.length <= 1 ? 'default' : 'pointer',
+                              fontSize: 15, color: manoObraRows.length <= 1 ? '#EEEEEE' : '#DDDDDD', borderRadius: 4, lineHeight: 1,
+                            }}
+                            onMouseEnter={(e) => { if (manoObraRows.length > 1) e.currentTarget.style.color = '#FF453A' }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = manoObraRows.length <= 1 ? '#EEEEEE' : '#DDDDDD' }}
+                          >
+                            ×
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
+              <button
+                type="button"
+                disabled={horasModeMo}
+                title={horasModeMo ? 'Con horas y tarifa cliente la M.O. se guarda como un solo total. Quitá horas o la tarifa para agregar más líneas.' : ''}
+                onClick={addManoObraRow}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, margin: '4px 0 0 28px', padding: '7px 12px',
+                  background: 'none', border: 'none', cursor: horasModeMo ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit', fontSize: 13, color: horasModeMo ? '#DDDDDD' : '#AAAAAA', borderRadius: 6,
+                }}
+                onMouseEnter={(e) => { if (!horasModeMo) { e.currentTarget.style.color = '#5064c8'; e.currentTarget.style.background = 'rgba(80,100,200,0.06)' } }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = horasModeMo ? '#DDDDDD' : '#AAAAAA'; e.currentTarget.style.background = 'none' }}
+              >
+                <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Agregar mano de obra
+              </button>
             </div>
           </div>
 
