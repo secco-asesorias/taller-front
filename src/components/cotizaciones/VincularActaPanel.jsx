@@ -231,7 +231,7 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
       {cotizacion?.id && !tieneAsignacion && !modoBuscar && (
         <>
           <p style={{ margin: '8px 0 10px', fontSize: 11, color: '#6B6B6B', lineHeight: 1.45 }}>
-            Sin acta vinculada. Asigná una para que el presupuesto se pueda aprobar y generar OT.
+            Sin acta vinculada. Asigna una para que el presupuesto se pueda aprobar y generar OT.
           </p>
           <button
             type="button"

@@ -1682,14 +1682,6 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
             </p>
           </div>
           <div style={{ flex: 1, overflow: 'auto' }}>
-            {esSoloLocal && (
-              <div style={{ padding: '14px 18px', background: 'rgba(169,130,37,0.07)', borderBottom: '1px solid rgba(169,130,37,0.18)' }}>
-                <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: '#a98225' }}>Mismo diseño que siempre</p>
-                <p style={{ margin: 0, fontSize: 12, color: '#6B6B6B', lineHeight: 1.55 }}>
-                  Ítems y mano de obra arriba, margen y descuentos en el bloque inferior, resumen financiero al pie. Guardá el borrador en el servidor cuando quieras conservarlo o seguí editando solo en esta pestaña.
-                </p>
-              </div>
-            )}
             <VincularActaPanel
               cotizacion={cotizacion}
               disabled={loading}
