@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { cotizacionService } from '../../services/cotizacionService'
 import { generarPDFPresupuestoCliente, generarPDFPresupuestoInterno } from '../../utils/pdfPresupuesto'
+import VincularActaPanel from '../../components/cotizaciones/VincularActaPanel'
 
 // ─── Funciones de cálculo (puras) ────────────────────────────
 function precioFinalConMargen(costoBruto, margenPct) {
@@ -168,14 +169,10 @@ function buildResumenInternoSnapshot(totales) {
     margen_pct: totales.margen_pct,
   }
 }
-function inferMoConceptoFromApiItem(it) {
-  if (!it) return 'mano_obra'
-  const d = String(it.descripcion || '').trim()
-  for (const key of TIPOS_ITEM) {
-    if (d === TIPO_ITEM_LABELS[key]) return key
-  }
-  const t = sanitizeTipoItem(it.tipo)
-  return TIPOS_ITEM.includes(t) ? t : 'mano_obra'
+/** Descripción de una fila M.O. al cargar desde el API (texto libre). */
+function moDescripcionFromApiItem(it) {
+  if (!it) return ''
+  return String(it.descripcion || '').trim()
 }
 
 // Separa ítems normales de la fila de mano de obra.
@@ -203,7 +200,7 @@ function separateItems(raw = [], margenInicial = 30) {
   const manoObraRows = moItems.length
     ? moItems.map((it, idx) => ({
       _id: `mo-${idx}-${Math.random().toString(36).slice(2, 9)}`,
-      concepto: inferMoConceptoFromApiItem(it),
+      descripcion: moDescripcionFromApiItem(it),
       precio: (Number(it.precio_unitario) || Number(it.mano_obra) || '') === 0 ? '' : (Number(it.precio_unitario) || Number(it.mano_obra) || ''),
     }))
     : [emptyMoRow()]
@@ -217,7 +214,7 @@ function separateItems(raw = [], margenInicial = 30) {
 function emptyMoRow() {
   return {
     _id: `mo-${Math.random().toString(36).slice(2, 9)}`,
-    concepto: 'mano_obra',
+    descripcion: '',
     precio: '',
   }
 }
@@ -257,9 +254,8 @@ function itemsForDB(rows, manoObraRows, horasTrabajoNum = 0, valorHoraClienteMo 
   const list = Array.isArray(manoObraRows) ? manoObraRows : []
   let moApiItems = []
   if (horasMode && ventaTotalHoras > 0) {
-    const m0 = list[0] || { concepto: 'mano_obra' }
-    const moConceptoKey = TIPOS_ITEM.includes(m0.concepto) ? m0.concepto : 'mano_obra'
-    const moDesc = TIPO_ITEM_LABELS[moConceptoKey] || 'Mano de obra'
+    const m0 = list[0] || { descripcion: '' }
+    const moDesc = String(m0.descripcion || '').trim() || 'Mano de obra'
     moApiItems = [{
       tipo: 'mano_obra',
       descripcion: moDesc,
@@ -272,13 +268,13 @@ function itemsForDB(rows, manoObraRows, horasTrabajoNum = 0, valorHoraClienteMo 
     }]
   } else {
     moApiItems = list
-      .filter((m) => Number(m.precio) > 0)
+      .filter((m) => Number(m.precio) > 0 || String(m.descripcion || '').trim())
       .map((m) => {
-        const moConceptoKey = TIPOS_ITEM.includes(m.concepto) ? m.concepto : 'mano_obra'
         const p = Number(m.precio) || 0
+        const d = String(m.descripcion || '').trim() || 'Mano de obra'
         return {
           tipo: 'mano_obra',
-          descripcion: TIPO_ITEM_LABELS[moConceptoKey] || 'Mano de obra',
+          descripcion: d,
           cantidad: 1,
           costo_unitario: 0,
           precio_unitario: p,
@@ -939,8 +935,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     setManoObraRows((prev) => {
       const next = prev.map((m) => {
         if (m._id !== id) return m
-        const v = field === 'concepto' ? sanitizeTipoItem(value) : value
-        return { ...m, [field]: v }
+        return { ...m, [field]: value }
       })
       touch(null, next, null, null, null, null, null, null)
       return next
@@ -1043,8 +1038,16 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   async function handlePDF(tipo) {
     setLoading(true)
     try {
-      if (tipo === 'cliente') await generarPDFPresupuestoCliente(cotizacionLocal())
-      else await generarPDFPresupuestoInterno(cotizacionLocal())
+      if (tipo === 'cliente') {
+        const local = cotizacionLocal()
+        if (cotizacion?.id) {
+          await cotizacionService.descargarPdfCliente(cotizacion.id, local)
+        } else {
+          await generarPDFPresupuestoCliente(local)
+        }
+      } else {
+        await generarPDFPresupuestoInterno(cotizacionLocal())
+      }
     } catch (e) { alert(`Error PDF: ${e.message}`) }
     finally { setLoading(false) }
   }
@@ -1115,8 +1118,11 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
     rechazada: { bg: 'rgba(255,69,58,0.10)', color: '#FF453A' },
   }[status] || { bg: '#F5F5F5', color: '#6B6B6B' }
   const vehManualMerged = { ...EMPTY_VEHICULO_MANUAL, ...(cotizacion.vista_cliente?.vehiculo_manual || {}), ...vehiculoManual }
-  const vehHeader = `${veh.marca || vehManualMerged.marca || ''} ${veh.modelo || vehManualMerged.modelo || ''}`.trim() || 'Presupuesto sin asignar'
-  const patenteHeader = veh.patente || vehManualMerged.patente || 'SIN ASIGNAR'
+  const actaVinculadaNumero = cotizacion?.actas?.numero_acta ?? null
+  const vehHeaderRaw = `${veh.marca || vehManualMerged.marca || ''} ${veh.modelo || vehManualMerged.modelo || ''}`.trim()
+  const vehHeader = vehHeaderRaw
+    || (actaVinculadaNumero ? `Acta #${actaVinculadaNumero}` : 'Presupuesto sin asignar')
+  const patenteHeader = veh.patente || vehManualMerged.patente || (actaVinculadaNumero ? '—' : 'SIN ASIGNAR')
   const tieneAsignacion = Boolean(cotizacion.acta_id || cotizacion.vehiculo_id || cotizacion.actas?.id || cotizacion.vehiculos?.id)
   const esSoloLocal = !cotizacion?.id
 
@@ -1233,7 +1239,6 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
                 <tbody>
                   {manoObraRows.map((mo, moIdx) => {
-                    const conceptKey = TIPOS_ITEM.includes(mo.concepto) ? mo.concepto : 'mano_obra'
                     const precioNeta = Number(mo.precio) || 0
                     const totalFilaIva = Math.round(precioNeta * 1.19)
                     const precioFieldHoras = horasModeMo && moIdx === 0
@@ -1244,31 +1249,22 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                           {`M.${moIdx + 1}`}
                         </td>
                         <td style={td({ width: 110 })}>
-                          <div style={{ position: 'relative' }}>
-                            <select
-                              value={conceptKey}
-                              onChange={(e) => updateManoObraRow(mo._id, 'concepto', e.target.value)}
-                              aria-label={`Concepto mano de obra ${moIdx + 1}`}
-                              style={{
-                                width: '100%', border: 'none', background: 'transparent', outline: 'none',
-                                fontSize: 11, fontWeight: 700,
-                                color: TIPO_COLOR[conceptKey] || '#5064c8',
-                                fontFamily: 'inherit', padding: '8px 18px 8px 8px', cursor: 'pointer',
-                                appearance: 'none', WebkitAppearance: 'none',
-                                textTransform: 'uppercase', letterSpacing: '0.4px',
-                              }}
-                            >
-                              {TIPOS_ITEM.map((t) => (
-                                <option key={t} value={t}>{TIPO_ITEM_LABELS[t]}</option>
-                              ))}
-                            </select>
-                            <span style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#CCCCCC', pointerEvents: 'none' }}>▾</span>
-                          </div>
+                          <span style={{ display: 'block', padding: '8px 8px', fontSize: 11, fontWeight: 700, color: '#5064c8', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                            M. de obra
+                          </span>
                         </td>
                         <td style={td({})}>
-                          <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: '#6B6B6B', fontStyle: 'italic' }}>
-                            {TIPO_ITEM_LABELS[conceptKey]}
-                          </span>
+                          <input
+                            type="text"
+                            value={mo.descripcion ?? ''}
+                            onChange={(e) => updateManoObraRow(mo._id, 'descripcion', e.target.value)}
+                            onFocus={() => setActiveRow(null)}
+                            placeholder="Descripción (ej. desmonte, alineación, diagnóstico…)"
+                            autoComplete="off"
+                            spellCheck="true"
+                            aria-label={`Descripción mano de obra ${moIdx + 1}`}
+                            style={cellInput({ color: '#111114' })}
+                          />
                         </td>
                         <td style={td({ width: 52, textAlign: 'center', color: '#AAAAAA', fontSize: 12 })}>1</td>
                         <td style={td({ width: 100 })}>
@@ -1564,82 +1560,113 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                 placeholder="Nota interna..."
                 style={{ flex: 1, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '6px 8px', fontFamily: 'inherit', outline: 'none', resize: 'none', color: '#111114' }} />
             </div>
+          </div>
 
-            {/* Acciones */}
-            <div style={{ padding: '0 16px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {status === 'sin_asignar' && (
-                <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(17,17,20,0.04)', border: '1px solid #E0E0E0', borderRadius: 8 }}>
-                  <p style={{ margin: 0, fontSize: 12, color: '#6B6B6B', fontWeight: 600 }}>
-                    Presupuesto sin asignar: puedes editarlo, exportar PDF y enviarlo. Para aprobarlo y generar OT debe asociarse a un acta/vehículo.
-                  </p>
-                </div>
-              )}
-              {status !== 'rechazada' && status !== 'aprobada' && [
-                { label: 'PDF cliente',  fn: () => handlePDF('cliente'),    s: { bg: '#FFF', color: '#111114', border: '1px solid #E0E0E0' } },
-                { label: 'PDF interno',  fn: () => handlePDF('interno'),    s: { bg: '#FFF', color: '#6B6B6B', border: '1px solid #E0E0E0' } },
-                { label: 'Marcar lista', fn: () => handleAction('lista'),   s: { bg: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' } },
-                { label: loading ? '…' : 'Enviar →', fn: () => handleAction('enviada'), s: { bg: '#a98225', color: '#FFF', border: 'none' } },
-              ].map(({ label, fn, s }) => (
-                <button key={label} type="button" onClick={fn} disabled={loading}
-                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: s.bg, color: s.color, border: s.border, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  {label}
-                </button>
-              ))}
+          {/* ── Acciones (fijas al pie, fuera del scroll de totales) ── */}
+          <div style={{
+            flexShrink: 0,
+            padding: '10px 16px 14px',
+            display: 'flex',
+            gap: 8,
+            flexWrap: 'wrap',
+            background: '#FFFFFF',
+            borderTop: '1px solid #E0E0E0',
+            boxShadow: '0 -2px 6px rgba(0,0,0,0.04)',
+          }}>
+            {status === 'sin_asignar' && (
+              <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(17,17,20,0.04)', border: '1px solid #E0E0E0', borderRadius: 8 }}>
+                <p style={{ margin: 0, fontSize: 12, color: '#6B6B6B', fontWeight: 600 }}>
+                  Presupuesto sin asignar: puedes editarlo, exportar PDF y enviarlo. Para aprobarlo y generar OT debe asociarse a un acta/vehículo.
+                </p>
+              </div>
+            )}
+            {status !== 'rechazada' && status !== 'aprobada' && [
+              { label: 'PDF cliente',  fn: () => handlePDF('cliente'),    s: { bg: '#FFF', color: '#111114', border: '1px solid #E0E0E0' } },
+              { label: 'PDF interno',  fn: () => handlePDF('interno'),    s: { bg: '#FFF', color: '#6B6B6B', border: '1px solid #E0E0E0' } },
+              { label: 'Marcar lista', fn: () => handleAction('lista'),   s: { bg: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' } },
+              { label: loading ? '…' : 'Enviar →', fn: () => handleAction('enviada'), s: { bg: '#a98225', color: '#FFF', border: 'none' } },
+            ].map(({ label, fn, s }) => (
+              <button key={label} type="button" onClick={fn} disabled={loading}
+                style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: s.bg, color: s.color, border: s.border, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {label}
+              </button>
+            ))}
 
-              {/* Respuesta del cliente — visible cuando está enviada */}
-              {status === 'enviada' && !tieneAsignacion && (
-                <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(169,130,37,0.06)', border: '1px solid rgba(169,130,37,0.22)', borderRadius: 8 }}>
-                  <p style={{ margin: 0, fontSize: 12, color: '#a98225', fontWeight: 600 }}>
-                    Presupuesto enviado sin asignar: sigue disponible para asociarlo a un acta/vehículo. La aprobación queda habilitada después de asignarlo.
-                  </p>
-                </div>
-              )}
-              {status === 'enviada' && tieneAsignacion && (
-                <>
-                  <div style={{ width: '100%', height: 1, background: '#F2F2F2', margin: '4px 0' }} />
-                  <span style={{ fontSize: 11, color: '#6B6B6B', alignSelf: 'center', flex: 1 }}>Respuesta del cliente:</span>
-                  <button type="button" onClick={handleAprobar} disabled={loading}
-                    style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: '#228b50', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    {loading ? '…' : '✓ Aprobado'}
-                  </button>
-                  <button type="button" onClick={() => setShowRechazo((v) => !v)} disabled={loading}
-                    style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: showRechazo ? 'rgba(255,69,58,0.12)' : '#FFF', color: '#FF453A', border: '1px solid rgba(255,69,58,0.35)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
-                    ✗ Rechazado
-                  </button>
-                  {showRechazo && (
-                    <div style={{ width: '100%', display: 'flex', gap: 8, marginTop: 4 }}>
-                      <input
-                        type="text"
-                        value={motivoRechazo}
-                        onChange={(e) => setMotivoRechazo(e.target.value)}
-                        placeholder="Motivo del rechazo..."
-                        style={{ flex: 1, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '6px 10px', fontFamily: 'inherit', outline: 'none', color: '#111114' }}
-                        onKeyDown={(e) => e.key === 'Enter' && handleRechazar()}
-                      />
-                      <button type="button" onClick={handleRechazar} disabled={loading}
-                        style={{ padding: '6px 14px', fontSize: 12, fontWeight: 700, background: '#FF453A', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
-                        Confirmar
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* Estado final: aprobado con acceso a OT */}
-              {status === 'aprobada' && onAbrirOT && (
+            {/* Respuesta del cliente — visible cuando está enviada */}
+            {status === 'enviada' && !tieneAsignacion && (
+              <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(169,130,37,0.06)', border: '1px solid rgba(169,130,37,0.22)', borderRadius: 8 }}>
+                <p style={{ margin: 0, fontSize: 12, color: '#a98225', fontWeight: 600 }}>
+                  Presupuesto enviado sin asignar: sigue disponible para asociarlo a un acta/vehículo. La aprobación queda habilitada después de asignarlo.
+                </p>
+              </div>
+            )}
+            {status === 'enviada' && tieneAsignacion && (
+              <>
+                <div style={{ width: '100%', height: 1, background: '#F2F2F2', margin: '4px 0' }} />
+                <span style={{ fontSize: 11, color: '#6B6B6B', alignSelf: 'center', flex: 1 }}>Respuesta del cliente:</span>
                 <button type="button" onClick={handleAprobar} disabled={loading}
                   style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: '#228b50', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Ver OT →
+                  {loading ? '…' : '✓ Aprobado'}
                 </button>
-              )}
+                <button type="button" onClick={() => setShowRechazo((v) => !v)} disabled={loading}
+                  style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: showRechazo ? 'rgba(255,69,58,0.12)' : '#FFF', color: '#FF453A', border: '1px solid rgba(255,69,58,0.35)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  ✗ Rechazado
+                </button>
+                {showRechazo && (
+                  <div style={{ width: '100%', display: 'flex', gap: 8, marginTop: 4 }}>
+                    <input
+                      type="text"
+                      value={motivoRechazo}
+                      onChange={(e) => setMotivoRechazo(e.target.value)}
+                      placeholder="Motivo del rechazo..."
+                      style={{ flex: 1, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '6px 10px', fontFamily: 'inherit', outline: 'none', color: '#111114' }}
+                      onKeyDown={(e) => e.key === 'Enter' && handleRechazar()}
+                    />
+                    <button type="button" onClick={handleRechazar} disabled={loading}
+                      style={{ padding: '6px 14px', fontSize: 12, fontWeight: 700, background: '#FF453A', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Confirmar
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
 
-              {/* Estado final: rechazado */}
-              {status === 'rechazada' && (
+            {/* Estado final: aprobado con acceso a OT */}
+            {status === 'aprobada' && (
+              <>
+                <button type="button" onClick={() => handlePDF('cliente')} disabled={loading}
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#111114', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  PDF cliente
+                </button>
+                <button type="button" onClick={() => handlePDF('interno')} disabled={loading}
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#6B6B6B', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  PDF interno
+                </button>
+                {onAbrirOT && (
+                  <button type="button" onClick={handleAprobar} disabled={loading}
+                    style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: '#228b50', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    Ver OT →
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Estado final: rechazado */}
+            {status === 'rechazada' && (
+              <>
                 <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,69,58,0.06)', border: '1px solid rgba(255,69,58,0.2)', borderRadius: 8 }}>
                   <p style={{ margin: 0, fontSize: 12, color: '#FF453A', fontWeight: 600 }}>Cotización rechazada</p>
                 </div>
-              )}
-            </div>
+                <button type="button" onClick={() => handlePDF('cliente')} disabled={loading}
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#111114', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  PDF cliente
+                </button>
+                <button type="button" onClick={() => handlePDF('interno')} disabled={loading}
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#6B6B6B', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  PDF interno
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -1663,6 +1690,16 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                 </p>
               </div>
             )}
+            <VincularActaPanel
+              cotizacion={cotizacion}
+              disabled={loading}
+              onVinculada={(full) => {
+                setCotizacion(full)
+                cotizacionIdRef.current = full?.id || cotizacionIdRef.current
+                cotizacionSnapRef.current = full
+              }}
+              onError={(msg) => alert(msg)}
+            />
             <div style={{ padding: '14px 18px', borderBottom: '1px solid #E0E0E0', background: '#FFFFFF' }}>
               <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#111114' }}>Cliente y vehículo</p>
               <p style={{ margin: '0 0 12px', fontSize: 11, color: '#6B6B6B', lineHeight: 1.45 }}>

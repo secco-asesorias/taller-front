@@ -41,7 +41,7 @@ function totalClienteCobro(totalFinal) {
   return Math.round(n(totalFinal) / 0.98)
 }
 
-function resumenFinanciero(cotizacion) {
+export function resumenFinanciero(cotizacion) {
   const vista = cotizacion.vista_cliente || {}
   const costoRepuestosNetos = n(cotizacion.costo_repuestos_netos, n(cotizacion.costo_total_neto, Math.round(n(cotizacion.costo_total) / 1.19)))
   const ventaRepuestosNetos = n(cotizacion.venta_repuestos_netos, n(cotizacion.neto_repuestos))

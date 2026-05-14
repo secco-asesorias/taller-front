@@ -94,13 +94,13 @@ export default function CotizacionesListScreen({ onNavigate }) {
   }
 
   async function handleEliminar(cot) {
-    if (statusKey(cot.status) === 'aprobada') {
-      toast.warning('Las cotizaciones aprobadas no se eliminan desde el listado.')
-      return
-    }
+    const estado = STATUS_LABEL[statusKey(cot.status)] || cot.status || ''
+    const advertencia = statusKey(cot.status) === 'aprobada'
+      ? '\n\nEsta cotización está APROBADA. Si tiene una OT vinculada, asegurate de revisarla antes.'
+      : ''
     const ok = await confirm({
       title: 'Eliminar cotización',
-      message: `¿Eliminar la cotización COT-${cot.numero_cotizacion}? Esta acción no se puede deshacer.`,
+      message: `¿Eliminar la cotización COT-${cot.numero_cotizacion}${estado ? ` (${estado})` : ''}? Esta acción no se puede deshacer.${advertencia}`,
       confirmText: 'Eliminar',
       danger: true,
     })
@@ -108,10 +108,17 @@ export default function CotizacionesListScreen({ onNavigate }) {
     setDeletingId(cot.id)
     try {
       await cotizacionService.eliminar(cot.id)
+      setCotizaciones((prev) => prev.filter((c) => c.id !== cot.id))
       toast.success('Cotización eliminada')
       refrescarLista()
     } catch (e) {
-      toast.error(e?.message ? String(e.message) : 'No se pudo eliminar la cotización')
+      const status = e?.status
+      const mensaje = e?.message ? String(e.message) : 'No se pudo eliminar la cotización'
+      if (status === 401 || status === 403) {
+        toast.error('No tenés permisos para eliminar cotizaciones (solo administrador).')
+      } else {
+        toast.error(mensaje)
+      }
     } finally {
       setDeletingId(null)
     }
@@ -195,7 +202,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
         >
           <p className="s-error" style={{ margin: 0 }}>{error}</p>
           <p style={{ color: '#6B6B6B', fontSize: 13, margin: '10px 0 0' }}>
-            Revisá la sesión y la API. Podés intentar de nuevo o crear un presupuesto nuevo.
+            Revisa la sesión y la API. Puedes intentar de nuevo o crear un presupuesto nuevo.
           </p>
         </div>
       )}
@@ -209,8 +216,14 @@ export default function CotizacionesListScreen({ onNavigate }) {
           {cotizaciones.map((cot) => {
             const veh = cot.vehiculos || cot.actas?.vehiculos || cot.vista_cliente?.vehiculo_manual || {}
             const cli = cot.clientes || cot.actas?.clientes || cot.vista_cliente?.cliente_manual || {}
-            const eliminarBloqueado = statusKey(cot.status) === 'aprobada'
             const eliminando = deletingId === cot.id
+            const tieneActaVinculada = Boolean(cot.acta_id || cot.actas?.id)
+            const numeroActa = cot.actas?.numero_acta ?? null
+            const descripcionVehiculo = [veh.marca, veh.modelo, veh.patente].filter(Boolean).join(' · ')
+            const lineaVehiculo = descripcionVehiculo
+              || (tieneActaVinculada
+                ? `Vinculada a Acta${numeroActa ? ` #${numeroActa}` : ''} · sin datos cargados`
+                : 'Sin vehículo en datos')
             return (
               <div key={cot.id} className="cot-card" style={{ minHeight: 120 }}>
                 <button
@@ -226,8 +239,8 @@ export default function CotizacionesListScreen({ onNavigate }) {
                           <span style={{ color: '#6B6B6B', fontWeight: 600 }}> · {cot.vista_cliente.titulo}</span>
                         )}
                       </p>
-                      <p style={{ margin: '0 0 4px', color: '#111114', fontSize: 13, lineHeight: 1.35 }}>
-                        {[veh.marca, veh.modelo, veh.patente].filter(Boolean).join(' · ') || 'Sin vehículo en datos'}
+                      <p style={{ margin: '0 0 4px', color: descripcionVehiculo ? '#111114' : '#6B6B6B', fontSize: 13, lineHeight: 1.35, fontStyle: descripcionVehiculo ? 'normal' : 'italic' }}>
+                        {lineaVehiculo}
                       </p>
                       {cli.nombre ? (
                         <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>{cli.nombre}</p>
@@ -265,12 +278,11 @@ export default function CotizacionesListScreen({ onNavigate }) {
                   <button
                     type="button"
                     className="s-btn-secondary cot-row-btn"
-                    disabled={eliminando || eliminarBloqueado}
-                    title={eliminarBloqueado ? 'No disponible para cotizaciones aprobadas' : 'Eliminar cotización'}
+                    disabled={eliminando}
+                    title="Eliminar cotización (requiere permisos de administrador)"
                     style={{
                       borderColor: 'rgba(255,69,58,0.35)',
                       color: '#FF453A',
-                      opacity: eliminarBloqueado ? 0.45 : 1,
                     }}
                     onClick={() => handleEliminar(cot)}
                   >
