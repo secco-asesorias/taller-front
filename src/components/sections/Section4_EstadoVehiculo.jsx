@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
 import { useForm } from '../../context/FormContext'
+import { useFormEntrega } from '../../context/FormEntregaContext'
 import { validarSeccion4 } from '../../utils/validation'
 import PhotoCapture from '../common/PhotoCapture'
 import LocalMultiPhotoCapture from '../common/LocalMultiPhotoCapture'
@@ -34,9 +35,11 @@ function EstadoSelector({ options, value, onChange }) {
   )
 }
 
-export default function Section4_EstadoVehiculo({ onNext, onBack }) {
+export default function Section4_EstadoVehiculo({ onNext, onBack, variant = 'ingreso' }) {
   const toast = useToast()
-  const { formData, updateForm } = useForm()
+  const useFormHook = variant === 'entrega' ? useFormEntrega : useForm
+  const { formData, updateForm } = useFormHook()
+  const actaPersistidaId = variant === 'entrega' ? formData.acta_entrega_id : formData.acta_id
   const [errores, setErrores] = useState({})
 
   useEffect(() => {
@@ -62,14 +65,14 @@ export default function Section4_EstadoVehiculo({ onNext, onBack }) {
     const next = { ...prev, [key]: result.preview, [`${key}_file`]: result.file }
     updateForm({ fotos: next })
     if (!result.file) return
-    if (!formData.acta_id) {
-      toast.info('La foto se subirá al terminar el acta')
+    if (!actaPersistidaId || variant === 'entrega') {
+      if (variant !== 'entrega') toast.info('La foto se subirá al terminar el acta')
       return
     }
     try {
       const base64 = await fileToBase64DataPart(result.file)
       const mime = result.file.type || 'image/jpeg'
-      await actaService.subirFoto(formData.acta_id, key, base64, mime, extDesdeMime(mime))
+      await actaService.subirFoto(actaPersistidaId, key, base64, mime, extDesdeMime(mime))
       const after = { ...next }
       delete after[`${key}_file`]
       updateForm({ fotos: after })
@@ -82,8 +85,8 @@ export default function Section4_EstadoVehiculo({ onNext, onBack }) {
   async function updateFotosMultiples(key, items) {
     const baseFotos = { ...(formData.fotos || {}), [key]: items }
     updateForm({ fotos: baseFotos })
-    if (!formData.acta_id) {
-      toast.info('Las fotos se subirán al terminar el acta')
+    if (!actaPersistidaId || variant === 'entrega') {
+      if (variant !== 'entrega') toast.info('Las fotos se subirán al terminar el acta')
       return
     }
     const tipo = key === 'interior' ? 'interior' : 'danos'
@@ -95,7 +98,7 @@ export default function Section4_EstadoVehiculo({ onNext, onBack }) {
       try {
         const base64 = await fileToBase64DataPart(it.file)
         const mime = it.file.type || 'image/jpeg'
-        await actaService.subirFoto(formData.acta_id, tipo, base64, mime, extDesdeMime(mime))
+        await actaService.subirFoto(actaPersistidaId, tipo, base64, mime, extDesdeMime(mime))
         nextItems[i] = { ...it, file: undefined }
         changed = true
       } catch (e) {

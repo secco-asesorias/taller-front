@@ -1,12 +1,14 @@
 ﻿import { useState } from 'react'
 import { useForm } from '../../context/FormContext'
+import { useFormEntrega } from '../../context/FormEntregaContext'
 import { validarSeccion7 } from '../../utils/validation'
 import SignaturePad from '../common/SignaturePad'
 
 const CARGOS = ['Técnico', 'Torre de Control', 'Jefe de Taller', 'Administración']
 
-export default function Section7_RecepcionSECCO({ onNext, onBack }) {
-  const { formData, updateForm } = useForm()
+export default function Section7_RecepcionSECCO({ onNext, onBack, variant = 'ingreso', finishLabel = 'Continuar' }) {
+  const useFormHook = variant === 'entrega' ? useFormEntrega : useForm
+  const { formData, updateForm } = useFormHook()
   const [errores, setErrores] = useState({})
 
   function handleSubmit() {
@@ -19,7 +21,9 @@ export default function Section7_RecepcionSECCO({ onNext, onBack }) {
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
         <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>SECCO</p>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>Recepción SECCO</h2>
+        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
+          {variant === 'entrega' ? 'Entrega SECCO' : 'Recepción SECCO'}
+        </h2>
         <div className="s-divider" />
       </div>
 
@@ -69,7 +73,7 @@ export default function Section7_RecepcionSECCO({ onNext, onBack }) {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
-        <button type="button" onClick={handleSubmit} className="s-btn-primary">Continuar</button>
+        <button type="button" onClick={handleSubmit} className="s-btn-primary">{finishLabel}</button>
         <button type="button" onClick={onBack}    className="s-btn-secondary">Volver</button>
       </div>
     </div>

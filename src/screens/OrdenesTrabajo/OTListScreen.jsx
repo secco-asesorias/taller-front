@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ordenTrabajoService } from '../../services/ordenTrabajoService'
+import PatenteLink from '../../components/vehiculo/PatenteLink'
 
 const STATUS_OPTS = [
   { value: '', label: 'Todos los estados' },
@@ -79,7 +80,11 @@ export default function OTListScreen({ onNavigate }) {
                     OT #{ot.numero_ot}
                   </p>
                   <p style={{ margin: '0 0 2px', color: '#111114', fontSize: 13 }}>
-                    {ot.vehiculos?.patente} — {ot.vehiculos?.marca} {ot.vehiculos?.modelo}
+                    {ot.vehiculos?.patente ? (
+                      <PatenteLink patente={ot.vehiculos.patente} mono stopPropagation />
+                    ) : '—'}
+                    {' — '}
+                    {ot.vehiculos?.marca} {ot.vehiculos?.modelo}
                   </p>
                   <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>{ot.clientes?.nombre}</p>
                   {ot.tecnico_nombre && (

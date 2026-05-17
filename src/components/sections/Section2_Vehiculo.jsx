@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react'
 import { useForm } from '../../context/FormContext'
+import { useFormEntrega } from '../../context/FormEntregaContext'
 import { validarSeccion2 } from '../../utils/validation'
 
 const ANIO_ACTUAL = new Date().getFullYear()
@@ -12,8 +13,9 @@ const MARCAS = [
   'Volkswagen','Volvo','Otra',
 ]
 
-export default function Section2_Vehiculo({ onNext, onBack }) {
-  const { formData, updateForm } = useForm()
+export default function Section2_Vehiculo({ onNext, onBack, variant = 'ingreso' }) {
+  const useFormHook = variant === 'entrega' ? useFormEntrega : useForm
+  const { formData, updateForm } = useFormHook()
   const [errores, setErrores] = useState({})
   const [touched, setTouched] = useState({})
 

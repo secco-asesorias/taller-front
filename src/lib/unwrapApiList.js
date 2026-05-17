@@ -6,7 +6,7 @@ export function unwrapApiList(data, preferredKeys = []) {
     const v = o[k]
     if (Array.isArray(v)) return v
   }
-  const keys = ['data', 'results', 'items', 'rows', 'list', 'actas', 'diagnosticos', 'cotizaciones', 'ordenes']
+  const keys = ['data', 'results', 'items', 'rows', 'list', 'actas', 'actas_entrega', 'diagnosticos', 'cotizaciones', 'ordenes', 'usuarios']
   for (const k of keys) {
     const v = o[k]
     if (Array.isArray(v)) return v

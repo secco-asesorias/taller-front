@@ -3,6 +3,7 @@ import { unwrapApiList } from '../../lib/unwrapApiList'
 import { cotizacionService } from '../../services/cotizacionService'
 import { useToast } from '../../components/common/ToastProvider'
 import { useConfirm } from '../../components/common/ConfirmProvider'
+import PatenteLink from '../../components/vehiculo/PatenteLink'
 
 const LIMITE_LISTA = 50
 
@@ -240,7 +241,15 @@ export default function CotizacionesListScreen({ onNavigate }) {
                         )}
                       </p>
                       <p style={{ margin: '0 0 4px', color: descripcionVehiculo ? '#111114' : '#6B6B6B', fontSize: 13, lineHeight: 1.35, fontStyle: descripcionVehiculo ? 'normal' : 'italic' }}>
-                        {lineaVehiculo}
+                        {veh.patente ? (
+                          <>
+                            {[veh.marca, veh.modelo].filter(Boolean).join(' · ')}
+                            {(veh.marca || veh.modelo) ? ' · ' : ''}
+                            <PatenteLink patente={veh.patente} mono stopPropagation />
+                          </>
+                        ) : (
+                          lineaVehiculo
+                        )}
                       </p>
                       {cli.nombre ? (
                         <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>{cli.nombre}</p>

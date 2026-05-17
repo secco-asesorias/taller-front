@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { unwrapApiList } from '../../lib/unwrapApiList'
 import { actaService } from '../../services/actaService'
 import { useToast } from '../../components/common/ToastProvider'
+import PatenteLink from '../../components/vehiculo/PatenteLink'
 
 const LIMITE_LISTA = 50
 
@@ -172,7 +173,10 @@ export default function ActasListScreen({ onNavigate }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                 <div style={{ minWidth: 0 }}>
                   <p style={{ margin: '0 0 2px', color: '#1e3a8a', fontSize: 15, fontWeight: 700 }}>
-                    #{acta.numero_acta} — {acta.vehiculos?.patente}
+                    #{acta.numero_acta}
+                    {acta.vehiculos?.patente ? (
+                      <> — <PatenteLink patente={acta.vehiculos.patente} mono stopPropagation /></>
+                    ) : null}
                   </p>
                   <p style={{ margin: '0 0 2px', color: '#111114', fontSize: 13, fontWeight: 500 }}>
                     {acta.clientes?.nombre}

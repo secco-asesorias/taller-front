@@ -1,12 +1,13 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRol } from '../../context/AuthContext'
 import { supabase } from '../../services/api'
 import styles from './AppShell.module.css'
 
 const NAV_ITEMS = [
   { label: 'Dashboard', to: '/', icon: '🏠' },
-  { label: 'Actas', to: '/actas', icon: '📂' },
+  { label: 'Actas ingreso', to: '/actas', icon: '📂' },
+  { label: 'Actas entrega', to: '/actas-entrega', icon: '🚗' },
   { label: 'Diagnósticos', to: '/diagnosticos', icon: '🔧' },
   { label: 'Cotizaciones', to: '/cotizaciones', icon: '💰' },
   { label: 'Órdenes de Trabajo', to: '/ordenes-trabajo', icon: '⚙️' },
@@ -20,10 +21,13 @@ const MOBILE_MAIN = [
   { label: 'OT', to: '/ordenes-trabajo', icon: '⚙️' },
 ]
 
-const MOBILE_MORE = [
+const MOBILE_MORE_BASE = [
   { label: 'Cotizaciones', to: '/cotizaciones', icon: '💰' },
+  { label: 'Entregas', to: '/actas-entrega', icon: '🚗' },
   { label: 'Clientes', to: '/clientes', icon: '👥' },
 ]
+
+const NAV_USUARIOS = { label: 'Usuarios', to: '/usuarios', icon: '🔑' }
 
 function NavItem({ to, icon, label }) {
   return (
@@ -38,17 +42,27 @@ function NavItem({ to, icon, label }) {
 }
 
 export default function AppShell() {
-  const { nombre, email, iniciales, avatarUrl, rolEtiqueta } = useRol()
+  const { nombre, email, iniciales, avatarUrl, rolEtiqueta, esAdmin } = useRol()
+  const navItems = useMemo(
+    () => (esAdmin ? [...NAV_ITEMS, NAV_USUARIOS] : NAV_ITEMS),
+    [esAdmin],
+  )
+  const mobileMore = useMemo(
+    () => (esAdmin ? [...MOBILE_MORE_BASE, NAV_USUARIOS] : MOBILE_MORE_BASE),
+    [esAdmin],
+  )
   const navigate = useNavigate()
   const location = useLocation()
   const pathname = location.pathname || '/'
   const esFullWidth = (
     pathname === '/' ||
     pathname.startsWith('/actas') ||
+    pathname.startsWith('/actas-entrega') ||
     pathname.startsWith('/diagnosticos') ||
     pathname.startsWith('/cotizaciones') ||
     pathname.startsWith('/ordenes-trabajo') ||
-    pathname.startsWith('/clientes')
+    pathname.startsWith('/clientes') ||
+    pathname.startsWith('/usuarios')
   )
   const [moreOpen, setMoreOpen] = useState(false)
 
@@ -97,7 +111,7 @@ export default function AppShell() {
 
             <p className={styles.navTitle}>Navegación</p>
             <nav className={styles.nav}>
-              {NAV_ITEMS.map((it) => (
+              {navItems.map((it) => (
                 <NavItem key={it.to} to={it.to} icon={it.icon} label={it.label} />
               ))}
             </nav>
@@ -152,7 +166,7 @@ export default function AppShell() {
                 Más
               </p>
               <div className={styles.mobileSheetList}>
-                {MOBILE_MORE.map((it) => (
+                {mobileMore.map((it) => (
                   <button
                     key={it.to}
                     onClick={() => { setMoreOpen(false); navigate(it.to) }}

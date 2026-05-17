@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { unwrapApiList } from '../../lib/unwrapApiList'
 import { diagnosticoService } from '../../services/diagnosticoService'
+import PatenteLink from '../../components/vehiculo/PatenteLink'
 
 const LIMITE_LISTA = 50
 
@@ -117,7 +118,13 @@ export default function DiagnosticosListScreen({ onNavigate }) {
                       DG-{diag.numero_diagnostico}
                     </p>
                     <p style={{ margin: '0 0 2px', color: '#111114', fontSize: 13 }}>
-                      {[veh.marca, veh.modelo, veh.patente].filter(Boolean).join(' · ')}
+                      {[veh.marca, veh.modelo].filter(Boolean).join(' · ')}
+                      {veh.patente ? (
+                        <>
+                          {(veh.marca || veh.modelo) ? ' · ' : ''}
+                          <PatenteLink patente={veh.patente} mono stopPropagation />
+                        </>
+                      ) : null}
                     </p>
                     {cli.nombre && (
                       <p style={{ margin: '0 0 2px', color: '#6B6B6B', fontSize: 12 }}>{cli.nombre}</p>

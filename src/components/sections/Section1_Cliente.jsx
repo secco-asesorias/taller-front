@@ -1,9 +1,11 @@
 ﻿import { useState } from 'react'
 import { useForm } from '../../context/FormContext'
+import { useFormEntrega } from '../../context/FormEntregaContext'
 import { validarSeccion1, formatearRUT } from '../../utils/validation'
 
-export default function Section1_Cliente({ onNext }) {
-  const { formData, updateForm } = useForm()
+export default function Section1_Cliente({ onNext, variant = 'ingreso' }) {
+  const useFormHook = variant === 'entrega' ? useFormEntrega : useForm
+  const { formData, updateForm } = useFormHook()
   const [errores, setErrores] = useState({})
   const [touched, setTouched] = useState({})
 

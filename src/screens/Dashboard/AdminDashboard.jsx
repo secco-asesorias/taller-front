@@ -5,6 +5,7 @@ import { actaService } from '../../services/actaService'
 import { diagnosticoService } from '../../services/diagnosticoService'
 import { cotizacionService } from '../../services/cotizacionService'
 import { ordenTrabajoService } from '../../services/ordenTrabajoService'
+import PatenteLink from '../../components/vehiculo/PatenteLink'
 
 const STATUS_LABEL = {
   borrador: 'Borrador',
@@ -280,7 +281,10 @@ export default function AdminDashboard({ onNavigate }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                   <div style={{ minWidth: 0 }}>
                     <p style={{ margin: '0 0 2px', color: '#1e3a8a', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      #{acta.numero_acta} — {acta.vehiculos?.patente}
+                      #{acta.numero_acta}
+                      {acta.vehiculos?.patente ? (
+                        <> — <PatenteLink patente={acta.vehiculos.patente} mono stopPropagation /></>
+                      ) : null}
                     </p>
                     <p style={{ margin: '0 0 2px', color: '#111114', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {acta.clientes?.nombre}

@@ -5,6 +5,7 @@ import { DiagnosticoProvider } from './context/DiagnosticoContext'
 import AppShell from './components/layout/AppShell'
 import { ToastProvider } from './components/common/ToastProvider'
 import { ConfirmProvider } from './components/common/ConfirmProvider'
+import { VehiculoPanelProvider } from './context/VehiculoPanelContext'
 
 // Screens
 import LoginScreen from './screens/Login/LoginScreen'
@@ -20,6 +21,11 @@ import PresupuestoForm, { nuevaCotizacionPlantilla } from './screens/Cotizacione
 import OTListScreen from './screens/OrdenesTrabajo/OTListScreen'
 import OTForm from './screens/OrdenesTrabajo/OTForm'
 import ClientesListScreen from './screens/Clientes/ClientesListScreen'
+import UsuariosListScreen from './screens/Usuarios/UsuariosListScreen'
+import ActasEntregaListScreen from './screens/ActasEntrega/ActasEntregaListScreen'
+import ActaEntregaForm from './screens/ActasEntrega/ActaEntregaForm'
+import ActaEntregaDetalleScreen from './screens/ActasEntrega/ActaEntregaDetalleScreen'
+import { actaEntregaService } from './services/actaEntregaService'
 
 function useLegacyNavigate() {
   const navigate = useNavigate()
@@ -246,6 +252,64 @@ function ClientesListRoute() {
   return <ClientesListScreen onNavigate={onNavigate} />
 }
 
+function ActasEntregaListRoute() {
+  const onNavigate = useLegacyNavigate()
+  return <ActasEntregaListScreen onNavigate={onNavigate} />
+}
+
+function ActaEntregaNuevaRoute() {
+  const navigate = useNavigate()
+  return <ActaEntregaForm onVolver={() => navigate('/actas-entrega')} />
+}
+
+function ActaEntregaDetalleRoute() {
+  const { actaEntregaId } = useParams()
+  const navigate = useNavigate()
+  const onNavigate = useLegacyNavigate()
+  return (
+    <ActaEntregaDetalleScreen
+      actaId={actaEntregaId}
+      onNavigate={onNavigate}
+      onVolver={() => navigate('/actas-entrega')}
+    />
+  )
+}
+
+function ActaEntregaEditarRoute() {
+  const { actaEntregaId } = useParams()
+  const navigate = useNavigate()
+  const [acta, setActa] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!actaEntregaId) return
+    actaEntregaService.obtener(actaEntregaId)
+      .then(setActa)
+      .catch((e) => setError(e?.message || 'Error al cargar acta de entrega'))
+  }, [actaEntregaId])
+
+  if (error) {
+    return (
+      <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <p className="s-error">{error}</p>
+        <button type="button" className="s-btn-secondary" style={{ marginTop: 16 }} onClick={() => navigate(`/actas-entrega/${actaEntregaId}`)}>
+          Volver
+        </button>
+      </div>
+    )
+  }
+
+  if (!acta) {
+    return (
+      <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando acta de entrega…</p>
+      </div>
+    )
+  }
+
+  return <ActaEntregaForm key={actaEntregaId} initialActa={acta} onVolver={() => navigate(`/actas-entrega/${actaEntregaId}`)} />
+}
+
 function AppRoutes() {
   return (
     <Routes>
@@ -256,6 +320,11 @@ function AppRoutes() {
         <Route path="actas/nueva" element={<ActaNuevaRoute />} />
         <Route path="actas/:actaId" element={<ActaDetalleRoute />} />
         <Route path="actas/:actaId/editar" element={<ActaEditarRoute />} />
+
+        <Route path="actas-entrega" element={<ActasEntregaListRoute />} />
+        <Route path="actas-entrega/nueva" element={<ActaEntregaNuevaRoute />} />
+        <Route path="actas-entrega/:actaEntregaId" element={<ActaEntregaDetalleRoute />} />
+        <Route path="actas-entrega/:actaEntregaId/editar" element={<ActaEntregaEditarRoute />} />
 
         <Route path="diagnosticos" element={<DiagnosticosListRoute />} />
         <Route path="diagnosticos/:diagId" element={<DiagnosticoDetalleRoute />} />
@@ -268,6 +337,7 @@ function AppRoutes() {
         <Route path="ordenes-trabajo/:otId" element={<OTDetalleRoute />} />
 
         <Route path="clientes" element={<ClientesListRoute />} />
+        <Route path="usuarios" element={<UsuariosListScreen />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
@@ -301,8 +371,10 @@ export default function App() {
       <ToastProvider>
         <ConfirmProvider>
           <BrowserRouter>
-            <ScrollToTop />
-            <AuthGate />
+            <VehiculoPanelProvider>
+              <ScrollToTop />
+              <AuthGate />
+            </VehiculoPanelProvider>
           </BrowserRouter>
         </ConfirmProvider>
       </ToastProvider>

@@ -3,6 +3,7 @@ import { actaService } from '../../services/actaService'
 import { generarPDFDesdeActaGuardada } from '../../utils/pdf'
 import { useToast } from '../../components/common/ToastProvider'
 import { useConfirm } from '../../components/common/ConfirmProvider'
+import PatenteLink from '../../components/vehiculo/PatenteLink'
 
 function Campo({ label, value }) {
   if (value === null || value === undefined || value === '') return null
@@ -124,7 +125,10 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
             {acta.numero_acta ? `Acta #${acta.numero_acta}` : 'Acta de recepción'}
           </p>
           <p style={{ margin: 0, fontSize: 12, color: '#6B6B6B' }}>
-            {vehiculo.marca} {vehiculo.modelo} · {vehiculo.patente}
+            {vehiculo.marca} {vehiculo.modelo}
+            {vehiculo.patente ? (
+              <> · <PatenteLink patente={vehiculo.patente} mono /></>
+            ) : null}
           </p>
         </div>
         <button
@@ -176,7 +180,12 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
             <Campo label="Marca" value={vehiculo.marca} />
             <Campo label="Modelo" value={vehiculo.modelo} />
             <Campo label="Año" value={vehiculo.anio} />
-            <Campo label="Patente" value={vehiculo.patente} />
+            {vehiculo.patente ? (
+              <div>
+                <p style={{ margin: '0 0 2px', fontSize: 10, color: '#6B6B6B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Patente</p>
+                <PatenteLink patente={vehiculo.patente} mono style={{ fontSize: 13, fontWeight: 500 }} />
+              </div>
+            ) : null}
             <Campo label="VIN" value={vehiculo.vin} />
             <Campo label="Color" value={vehiculo.color} />
           </Seccion>

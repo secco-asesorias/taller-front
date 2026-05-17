@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { cotizacionService } from '../../services/cotizacionService'
 import { generarPDFPresupuestoCliente, generarPDFPresupuestoInterno } from '../../utils/pdfPresupuesto'
 import VincularActaPanel from '../../components/cotizaciones/VincularActaPanel'
+import PatenteLink from '../../components/vehiculo/PatenteLink'
+import { isPatenteAbrible } from '../../lib/normalizePatente'
 
 // ─── Funciones de cálculo (puras) ────────────────────────────
 function precioFinalConMargen(costoBruto, margenPct) {
@@ -1136,7 +1138,12 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
         <img src="/logo-secco.png" alt="SECCO" style={{ height: 24, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.target.style.display = 'none' }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111114', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {vehHeader} · <span style={{ fontFamily: 'monospace', letterSpacing: '1px' }}>{patenteHeader}</span>
+            {vehHeader} ·{' '}
+            {isPatenteAbrible(patenteHeader) ? (
+              <PatenteLink patente={patenteHeader} mono />
+            ) : (
+              <span style={{ fontFamily: 'monospace', letterSpacing: '1px' }}>{patenteHeader}</span>
+            )}
           </p>
           <p style={{ margin: 0, fontSize: 11, color: '#6B6B6B' }}>{cli.nombre || (esSoloLocal ? 'Completá datos en el presupuesto o vinculá un acta después' : '')}</p>
         </div>

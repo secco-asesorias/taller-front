@@ -1,10 +1,12 @@
 ﻿import { useState, useEffect } from 'react'
 import { useForm } from '../../context/FormContext'
+import { useFormEntrega } from '../../context/FormEntregaContext'
 import { validarSeccion6 } from '../../utils/validation'
 import SignaturePad from '../common/SignaturePad'
 
-export default function Section6_FirmaCliente({ onNext, onBack }) {
-  const { formData, updateForm } = useForm()
+export default function Section6_FirmaCliente({ onNext, onBack, variant = 'ingreso' }) {
+  const useFormHook = variant === 'entrega' ? useFormEntrega : useForm
+  const { formData, updateForm } = useFormHook()
   const [errores, setErrores] = useState({})
 
   useEffect(() => {

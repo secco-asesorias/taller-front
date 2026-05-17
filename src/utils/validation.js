@@ -102,6 +102,57 @@ export function validarSeccion2(datos) {
   return errores
 }
 
+// Paso 1 acta de entrega — solo registros existentes
+export function validarSeleccionEntrega(datos) {
+  const errores = {}
+  if (!datos.vehiculo_id) errores.patente = 'Busca un vehículo registrado por patente'
+  if (!datos.cliente_id) errores.cliente_id = 'Selecciona el cliente vinculado al vehículo'
+  if (!String(datos.trabajo_realizado || '').trim()) {
+    errores.trabajo_realizado = 'Selecciona el trabajo desde OT, cotización o acta de ingreso'
+  }
+  if (!datos.firma_cliente) errores.firma_cliente = 'Selecciona una firma de cliente ya guardada'
+  if (!datos.firma_secco) errores.firma_secco = 'Selecciona una firma SECCO ya guardada'
+  if (!String(datos.nombre_responsable || '').trim()) {
+    errores.nombre_responsable = 'Selecciona el responsable que entrega el vehículo'
+  }
+  return errores
+}
+
+export function validarDeclaracionesEntrega(datos) {
+  const errores = {}
+  if (!datos.acepta_declaracion) errores.acepta_declaracion = 'El cliente debe aceptar la declaración'
+  if (!datos.acepta_responsabilidad_objetos) {
+    errores.acepta_responsabilidad_objetos = 'Debe aceptarse la responsabilidad por objetos no retirados'
+  }
+  if (!datos.acepta_pruebas_ruta) errores.acepta_pruebas_ruta = 'Debe autorizarse pruebas de ruta'
+  if (!String(datos.nombre_cliente || '').trim()) errores.nombre_cliente = 'Falta el nombre del firmante'
+  if (!datos.firma_cliente) errores.firma_cliente = 'Falta la firma del cliente seleccionada'
+  if (!String(datos.nombre_responsable || '').trim()) errores.nombre_responsable = 'Falta el responsable SECCO'
+  if (!datos.firma_secco) errores.firma_secco = 'Falta la firma SECCO seleccionada'
+  return errores
+}
+
+// Validar sección 3 — acta de entrega
+export function validarSeccion3Entrega(datos) {
+  const errores = {}
+  if (!datos.fecha_entrega) errores.fecha_entrega = 'La fecha de entrega es obligatoria'
+  if (!datos.hora_entrega) errores.hora_entrega = 'La hora de entrega es obligatoria'
+  if (!datos.kilometraje || datos.kilometraje <= 0)
+    errores.kilometraje = 'El kilometraje es obligatorio'
+  if (!datos.foto_km_preview) errores.foto_km = 'La foto del kilometraje es obligatoria'
+  if (!datos.combustible) errores.combustible = 'Selecciona el nivel de combustible'
+  if (!datos.foto_combustible_preview) errores.foto_combustible = 'La foto del combustible es obligatoria'
+  if (datos.llaves === '' || datos.llaves === null || datos.llaves === undefined) errores.llaves = 'Indica la cantidad de llaves'
+  return errores
+}
+
+export function validarSeccion5Entrega(datos) {
+  const errores = {}
+  const texto = datos.trabajo_realizado ?? datos.trabajo_solicitado ?? ''
+  if (!String(texto).trim()) errores.trabajo_realizado = 'Describe el trabajo realizado'
+  return errores
+}
+
 // Validar sección 3
 export function validarSeccion3(datos) {
   const errores = {}

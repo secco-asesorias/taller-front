@@ -3,6 +3,7 @@ import { clienteService } from '../../services/clienteService'
 import { useToast } from '../../components/common/ToastProvider'
 import { vehiculoService } from '../../services/vehiculoService'
 import { useConfirm } from '../../components/common/ConfirmProvider'
+import PatenteLink from '../../components/vehiculo/PatenteLink'
 
 export default function ClientesListScreen({ onNavigate }) {
   const toast = useToast()
@@ -409,7 +410,10 @@ export default function ClientesListScreen({ onNavigate }) {
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                             <div style={{ minWidth: 0 }}>
                               <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#111114' }}>
-                                {v.patente || '—'} {v.marca ? `· ${v.marca}` : ''} {v.modelo ? `${v.modelo}` : ''}
+                                {v.patente ? (
+                                  <PatenteLink patente={v.patente} mono style={{ fontWeight: 800, color: '#111114', textDecoration: 'none' }} />
+                                ) : '—'}
+                                {v.marca ? ` · ${v.marca}` : ''} {v.modelo ? `${v.modelo}` : ''}
                               </p>
                               {(v.anio || v.vin || v.color) && (
                                 <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B6B6B' }}>
@@ -590,7 +594,11 @@ export default function ClientesListScreen({ onNavigate }) {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
                 <div>
                   <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#111114' }}>Detalle vehículo</p>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B6B6B' }}>{detalleVehiculo.patente || '—'}</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B6B6B' }}>
+                    {detalleVehiculo.patente ? (
+                      <PatenteLink patente={detalleVehiculo.patente} mono />
+                    ) : '—'}
+                  </p>
                 </div>
                 <button type="button" onClick={closeDetalleVehiculo} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 900, lineHeight: 1, padding: 0, color: '#6B6B6B' }}>×</button>
               </div>
