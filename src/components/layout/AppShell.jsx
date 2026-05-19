@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: 'Cotizaciones', to: '/cotizaciones', icon: '💰' },
   { label: 'Órdenes de Trabajo', to: '/ordenes-trabajo', icon: '⚙️' },
   { label: 'Clientes', to: '/clientes', icon: '👥' },
+  { label: 'Vehículos', to: '/vehiculos', icon: '🚙' },
 ]
 
 const MOBILE_MAIN = [
@@ -25,6 +26,7 @@ const MOBILE_MORE_BASE = [
   { label: 'Cotizaciones', to: '/cotizaciones', icon: '💰' },
   { label: 'Entregas', to: '/actas-entrega', icon: '🚗' },
   { label: 'Clientes', to: '/clientes', icon: '👥' },
+  { label: 'Vehículos', to: '/vehiculos', icon: '🚙' },
 ]
 
 const NAV_USUARIOS = { label: 'Usuarios', to: '/usuarios', icon: '🔑' }
@@ -62,6 +64,7 @@ export default function AppShell() {
     pathname.startsWith('/cotizaciones') ||
     pathname.startsWith('/ordenes-trabajo') ||
     pathname.startsWith('/clientes') ||
+    pathname.startsWith('/vehiculos') ||
     pathname.startsWith('/usuarios')
   )
   const [moreOpen, setMoreOpen] = useState(false)

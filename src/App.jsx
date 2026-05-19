@@ -21,6 +21,7 @@ import PresupuestoForm, { nuevaCotizacionPlantilla } from './screens/Cotizacione
 import OTListScreen from './screens/OrdenesTrabajo/OTListScreen'
 import OTForm from './screens/OrdenesTrabajo/OTForm'
 import ClientesListScreen from './screens/Clientes/ClientesListScreen'
+import VehiculosListScreen from './screens/Vehiculos/VehiculosListScreen'
 import UsuariosListScreen from './screens/Usuarios/UsuariosListScreen'
 import ActasEntregaListScreen from './screens/ActasEntrega/ActasEntregaListScreen'
 import ActaEntregaForm from './screens/ActasEntrega/ActaEntregaForm'
@@ -253,6 +254,15 @@ function ClientesListRoute() {
   return <ClientesListScreen onNavigate={onNavigate} />
 }
 
+function VehiculosListRoute() {
+  return <VehiculosListScreen />
+}
+
+function VehiculoDetalleRoute() {
+  const { patente } = useParams()
+  return <VehiculosListScreen patenteInicial={patente} />
+}
+
 function ActasEntregaListRoute() {
   const onNavigate = useLegacyNavigate()
   return <ActasEntregaListScreen onNavigate={onNavigate} />
@@ -339,6 +349,8 @@ function AppRoutes() {
         <Route path="ordenes-trabajo/:otId" element={<OTDetalleRoute />} />
 
         <Route path="clientes" element={<ClientesListRoute />} />
+        <Route path="vehiculos" element={<VehiculosListRoute />} />
+        <Route path="vehiculos/:patente" element={<VehiculoDetalleRoute />} />
         <Route path="usuarios" element={<UsuariosListScreen />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
