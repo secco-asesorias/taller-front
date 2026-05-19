@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { ordenTrabajoService } from '../../services/ordenTrabajoService'
 import { listarTecnicos } from '../../context/AuthContext'
 
@@ -93,6 +93,15 @@ function normalizeInstruccionesOT(ot, repuestos) {
 function nextStatus(current) {
   const idx = STATUS_FLOW.indexOf(current)
   return idx < STATUS_FLOW.length - 1 ? STATUS_FLOW[idx + 1] : null
+}
+
+/** Incluye el técnico ya asignado en el select aunque no venga en GET /api/usuarios. */
+function opcionesTecnicos(tecnicos, ot) {
+  const id = ot?.tecnico_id
+  const nombre = ot?.tecnico_nombre || ot?.tecnico_asignado
+  if (!id) return tecnicos
+  if (tecnicos.some((t) => t.id === id)) return tecnicos
+  return [{ id, nombre: nombre || 'Técnico asignado' }, ...tecnicos]
 }
 
 function VehiclePanel({ ot }) {
@@ -307,8 +316,8 @@ export default function OTForm({ otInicial, onVolver }) {
   const [ot, setOt] = useState(otInicial)
   const initialRepuestos = normalizeRepuestosOT(otInicial)
   const [tecnicos, setTecnicos] = useState([])
-  const [tecnicoId, setTecnicoId] = useState('')
-  const [tecnico, setTecnico] = useState(otInicial.tecnico_nombre || '')
+  const [tecnicoId, setTecnicoId] = useState(() => otInicial.tecnico_id || '')
+  const [tecnico, setTecnico] = useState(() => otInicial.tecnico_nombre || otInicial.tecnico_asignado || '')
   const [status, setStatus] = useState(otInicial.status || 'generada')
   const [repuestos, setRepuestos] = useState(initialRepuestos)
   const [instrucciones, setInstrucciones] = useState(() => normalizeInstruccionesOT(otInicial, initialRepuestos))
@@ -321,6 +330,14 @@ export default function OTForm({ otInicial, onVolver }) {
   useEffect(() => {
     listarTecnicos().then(setTecnicos).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (ot.tecnico_id) setTecnicoId(ot.tecnico_id)
+    const nombre = ot.tecnico_nombre || ot.tecnico_asignado
+    if (nombre) setTecnico(nombre)
+  }, [ot.tecnico_id, ot.tecnico_nombre, ot.tecnico_asignado])
+
+  const tecnicosOpciones = useMemo(() => opcionesTecnicos(tecnicos, ot), [tecnicos, ot])
 
   const scheduleGuardar = useCallback((payload) => {
     setSaveStatus('unsaved')
@@ -513,13 +530,13 @@ export default function OTForm({ otInicial, onVolver }) {
                   value={tecnicoId}
                   onChange={(e) => {
                     setTecnicoId(e.target.value)
-                    const found = tecnicos.find((t) => t.id === e.target.value)
+                    const found = tecnicosOpciones.find((t) => t.id === e.target.value)
                     setTecnico(found?.nombre || '')
                   }}
                   style={{ flex: 1, fontSize: 13, border: '1px solid #E0E0E0', borderRadius: 8, padding: '8px 12px', fontFamily: 'inherit', color: '#111114', cursor: 'pointer', background: '#FFFFFF', outline: 'none' }}
                 >
                   <option value="">— Seleccionar técnico —</option>
-                  {tecnicos.map((t) => (
+                  {tecnicosOpciones.map((t) => (
                     <option key={t.id} value={t.id}>{t.nombre}</option>
                   ))}
                 </select>

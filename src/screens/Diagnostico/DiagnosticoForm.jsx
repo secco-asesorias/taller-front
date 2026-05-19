@@ -169,7 +169,7 @@ export default function DiagnosticoForm({ onVolver }) {
         </div>
 
         <button type="button" onClick={onVolver} className="s-btn-primary" style={{ maxWidth: 380, width: '100%' }}>
-          Volver al inicio
+          Ver detalle del diagnóstico
         </button>
       </div>
     )

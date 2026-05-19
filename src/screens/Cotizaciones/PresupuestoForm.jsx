@@ -303,6 +303,44 @@ const ITEM_API_PLACEHOLDER = {
 const EMPTY_CLIENTE_MANUAL = { nombre: '', telefono: '', email: '' }
 const EMPTY_VEHICULO_MANUAL = { marca: '', modelo: '', patente: '', anio: '' }
 
+function strCampo(...vals) {
+  for (const v of vals) {
+    if (v == null) continue
+    const s = String(v).trim()
+    if (s) return s
+  }
+  return ''
+}
+
+function actaRelacionada(cot) {
+  return cot?.actas || cot?.diagnosticos?.actas || {}
+}
+
+/** Cliente/vehículo del acta o relaciones directas; vista_cliente manual tiene prioridad si tiene valor. */
+function mergeClienteManual(cot) {
+  const acta = actaRelacionada(cot)
+  const rel = cot?.clientes || acta?.clientes || {}
+  const vista = cot?.vista_cliente?.cliente_manual || {}
+  return {
+    nombre: strCampo(vista.nombre, rel.nombre),
+    telefono: strCampo(vista.telefono, rel.telefono),
+    email: strCampo(vista.email, rel.email),
+  }
+}
+
+function mergeVehiculoManual(cot) {
+  const acta = actaRelacionada(cot)
+  const rel = cot?.vehiculos || acta?.vehiculos || {}
+  const vista = cot?.vista_cliente?.vehiculo_manual || {}
+  const anioRel = rel.anio != null && rel.anio !== '' ? String(rel.anio) : ''
+  return {
+    marca: strCampo(vista.marca, rel.marca),
+    modelo: strCampo(vista.modelo, rel.modelo),
+    patente: strCampo(vista.patente, rel.patente),
+    anio: strCampo(vista.anio, anioRel),
+  }
+}
+
 /** Ítems listos para API: sin filas vacías (Zod exige descripción). */
 function itemsGuardados(rows, manoObraRows, horasTrabajoNum, valorHoraClienteMo) {
   const raw = itemsForDB(rows, manoObraRows, horasTrabajoNum, valorHoraClienteMo).filter((it) => String(it.descripcion || '').trim())
@@ -669,24 +707,21 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   const resizeTotalesDrag = useRef({ active: false, startY: 0, startH: 0 })
   const saveTimer = useRef(null)
 
-  const [clienteManual, setClienteManual] = useState(() => ({
-    ...EMPTY_CLIENTE_MANUAL,
-    ...(cotizacionInicial.vista_cliente?.cliente_manual || {}),
-  }))
-  const [vehiculoManual, setVehiculoManual] = useState(() => ({
-    ...EMPTY_VEHICULO_MANUAL,
-    ...(cotizacionInicial.vista_cliente?.vehiculo_manual || {}),
-  }))
+  const [clienteManual, setClienteManual] = useState(() => mergeClienteManual(cotizacionInicial))
+  const [vehiculoManual, setVehiculoManual] = useState(() => mergeVehiculoManual(cotizacionInicial))
   const clienteManualRef = useRef(clienteManual)
   const vehiculoManualRef = useRef(vehiculoManual)
   useEffect(() => { clienteManualRef.current = clienteManual }, [clienteManual])
   useEffect(() => { vehiculoManualRef.current = vehiculoManual }, [vehiculoManual])
 
   useEffect(() => {
-    const vc = cotizacion.vista_cliente || {}
-    setClienteManual({ ...EMPTY_CLIENTE_MANUAL, ...(vc.cliente_manual || {}) })
-    setVehiculoManual({ ...EMPTY_VEHICULO_MANUAL, ...(vc.vehiculo_manual || {}) })
-  }, [cotizacion.id])
+    const nextCliente = mergeClienteManual(cotizacion)
+    const nextVeh = mergeVehiculoManual(cotizacion)
+    setClienteManual(nextCliente)
+    setVehiculoManual(nextVeh)
+    clienteManualRef.current = nextCliente
+    vehiculoManualRef.current = nextVeh
+  }, [cotizacion.id, cotizacion.acta_id])
 
   useEffect(() => {
     cotizacionIdRef.current = cotizacion?.id || null

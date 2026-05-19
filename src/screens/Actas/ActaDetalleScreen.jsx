@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { actaService } from '../../services/actaService'
+import { diagnosticoService } from '../../services/diagnosticoService'
+import { useRol } from '../../context/AuthContext'
 import { generarPDFDesdeActaGuardada } from '../../utils/pdf'
 import { useToast } from '../../components/common/ToastProvider'
 import { useConfirm } from '../../components/common/ConfirmProvider'
@@ -39,11 +41,13 @@ function statusStyle(status) {
 export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
   const toast = useToast()
   const { confirm } = useConfirm()
+  const { puedeCrearDiagnostico } = useRol()
   const [acta, setActa] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [descargando, setDescargando] = useState(false)
   const [eliminando, setEliminando] = useState(false)
+  const [creandoDiag, setCreandoDiag] = useState(false)
 
   useEffect(() => {
     if (!actaId) { setError('ID de acta no especificado'); setLoading(false); return }
@@ -59,6 +63,23 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
     try { await generarPDFDesdeActaGuardada(acta) }
     catch (e) { alert(`Error al generar PDF: ${e.message}`) }
     finally { setDescargando(false) }
+  }
+
+  async function handleIniciarDiagnostico() {
+    if (!acta?.id) return
+    setCreandoDiag(true)
+    try {
+      const patente = acta.vehiculos?.patente || ''
+      const diag = await diagnosticoService.crear(acta.id, patente || undefined)
+      const id = diag?.id
+      if (!id) throw new Error('No se obtuvo id del diagnóstico')
+      toast.success('Diagnóstico listo para completar')
+      onNavigate?.(`diagnosticos/${id}/editar`)
+    } catch (e) {
+      toast.error(e?.message || 'No se pudo iniciar el diagnóstico')
+    } finally {
+      setCreandoDiag(false)
+    }
   }
 
   async function handleEliminar() {
@@ -270,15 +291,33 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
 
         {/* Acciones */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24 }}>
-          {acta.diagnostico_id && (
+          {acta.diagnostico_id ? (
+            <>
+              <button
+                type="button"
+                className="s-btn-primary"
+                onClick={() => onNavigate?.(`diagnosticos/${acta.diagnostico_id}`)}
+              >
+                Ver diagnóstico →
+              </button>
+              <button
+                type="button"
+                className="s-btn-secondary"
+                onClick={() => onNavigate?.(`diagnosticos/${acta.diagnostico_id}/editar`)}
+              >
+                Continuar / editar checklist
+              </button>
+            </>
+          ) : puedeCrearDiagnostico ? (
             <button
               type="button"
               className="s-btn-primary"
-              onClick={() => onNavigate?.(`diagnosticos/${acta.diagnostico_id}`)}
+              disabled={creandoDiag}
+              onClick={handleIniciarDiagnostico}
             >
-              Ver diagnóstico →
+              {creandoDiag ? 'Iniciando…' : 'Iniciar diagnóstico'}
             </button>
-          )}
+          ) : null}
           <button type="button" className="s-btn-secondary" onClick={onVolver}>
             Volver a actas
           </button>
