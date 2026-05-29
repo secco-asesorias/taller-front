@@ -298,6 +298,13 @@ const ITEM_API_PLACEHOLDER = {
 const EMPTY_CLIENTE_MANUAL = { nombre: '', telefono: '', email: '' }
 const EMPTY_VEHICULO_MANUAL = { marca: '', modelo: '', patente: '', anio: '' }
 
+function mergeClienteManual(cot) {
+  return { ...EMPTY_CLIENTE_MANUAL, ...(cot?.vista_cliente?.cliente_manual || {}) }
+}
+
+function mergeVehiculoManual(cot) {
+  return { ...EMPTY_VEHICULO_MANUAL, ...(cot?.vista_cliente?.vehiculo_manual || {}) }
+}
 
 function itemsGuardados(rows, manoObraRows, horasTrabajoNum, valorHoraClienteMo) {
   const raw = itemsForDB(rows, manoObraRows, horasTrabajoNum, valorHoraClienteMo).filter((it) => String(it.descripcion || '').trim())
@@ -734,7 +741,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       titulo,
       tipo_presupuesto: vc.tipo_presupuesto || cotizacion.tipo_presupuesto || 'final',
       descuento_tipo: descuentoTipo,
-      descuento_valor: descuento,
+      descuento_valor: toNumber(descuento),
       margen_pct: margen,
       horas_trabajo: toNumber(horasTrabajo),
       costo_hora_tecnico: toNumber(costoHoraTecnico),
@@ -760,8 +767,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       const items = itemsGuardados(rows, manoObraRows, horasTrabajoNum, Number(valorHoraClienteMo) || 0)
       await cotizacionService.actualizar(id, {
         items,
-        descuento,
-        descuento_tipo: descuentoTipo,
+        descuento: toNumber(descuento),
         notas,
         notas_internas: notasInternas,
         vista_cliente: buildVistaClientePayload(),
@@ -808,12 +814,12 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
         const vcBase = snap.vista_cliente || {}
         await cotizacionService.actualizar(id, {
           items: itemsGuardados(r, mo, htNum, vhNum),
-          descuento: nd, descuento_tipo: ndt,
+          descuento: toNumber(nd),
           notas: nn, notas_internas: nni,
           vista_cliente: {
             titulo: nt,
             descuento_tipo: ndt,
-            descuento_valor: nd,
+            descuento_valor: toNumber(nd),
             margen_pct: mg,
             horas_trabajo: toNumber(ht),
             costo_hora_tecnico: toNumber(cht),
@@ -969,7 +975,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       const persisted = await ensurePersistida()
       await cotizacionService.actualizar(persisted.id, {
         items: itemsGuardados(rows, manoObraRows, horasTrabajoNum, Number(valorHoraClienteMo) || 0),
-        descuento, descuento_tipo: descuentoTipo,
+        descuento: toNumber(descuento),
         notas, notas_internas: notasInternas,
         vista_cliente: buildVistaClientePayload(),
         status: newStatus,
@@ -988,7 +994,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       const persisted = await ensurePersistida()
       await cotizacionService.actualizar(persisted.id, {
         items: itemsGuardados(rows, manoObraRows, horasTrabajoNum, Number(valorHoraClienteMo) || 0),
-        descuento, descuento_tipo: descuentoTipo,
+        descuento: toNumber(descuento),
         notas, notas_internas: notasInternas,
         vista_cliente: buildVistaClientePayload(),
         status: 'enviada',
@@ -1134,7 +1140,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               <span style={{ fontFamily: 'monospace', letterSpacing: '1px' }}>{patenteHeader}</span>
             )}
           </p>
-          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>{cli.nombre || (esSoloLocal ? 'Completa datos en el presupuesto o vinculá un acta después' : '')}</p>
+          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cli.nombre || (esSoloLocal ? 'Completa datos en el presupuesto o vinculá un acta después' : '')}</p>
         </div>
         {esSoloLocal && (
           <button
@@ -1410,7 +1416,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               <span style={{ fontSize: 12, color: 'var(--muted-foreground)', flex: 1 }}>Descuento</span>
               <select
                 value={descuentoTipo}
-                onChange={(e) => { setDescuentoTipo(e.target.value); touch(null, null, null, e.target.value, null, null, null) }}
+                onChange={(e) => { setDescuentoTipo(e.target.value); setDescuento(0); touch(null, null, 0, e.target.value, null, null, null) }}
                 style={{ fontSize: 12, border: '1px solid var(--border)', borderRadius: 6, padding: '4px 6px', fontFamily: 'inherit', color: 'var(--foreground)', cursor: 'pointer', background: 'var(--background)' }}
               >
                 <option value="monto">$</option>

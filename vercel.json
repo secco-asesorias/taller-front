@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/((?!assets|logo-secco|favicon\\.ico).*)",
+      "destination": "/index.html"
+    }
+  ]
+}
