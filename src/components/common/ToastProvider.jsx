@@ -3,16 +3,16 @@ import { createPortal } from 'react-dom'
 
 const ToastContext = createContext(null)
 
-function toastStyle(type) {
-  if (type === 'success') return { border: '1.5px solid rgba(52,199,89,0.35)', background: 'rgba(52,199,89,0.10)', color: '#135c27' }
-  if (type === 'error') return { border: '1.5px solid rgba(255,69,58,0.35)', background: 'rgba(255,69,58,0.10)', color: '#b42318' }
-  if (type === 'warning') return { border: '1.5px solid rgba(169,130,37,0.35)', background: 'rgba(169,130,37,0.10)', color: '#6b4f10' }
-  return { border: '1.5px solid rgba(30,58,138,0.25)', background: 'rgba(30,58,138,0.08)', color: '#1e3a8a' }
+function toastClass(type) {
+  if (type === 'success') return 'toast-success'
+  if (type === 'error')   return 'toast-error'
+  if (type === 'warning') return 'toast-warning'
+  return 'toast-info'
 }
 
 function toastIcon(type) {
   if (type === 'success') return '✓'
-  if (type === 'error') return '⚠'
+  if (type === 'error')   return '⚠'
   if (type === 'warning') return '!'
   return 'ℹ'
 }
@@ -44,8 +44,8 @@ export function ToastProvider({ children }) {
     push,
     remove,
     success: (msg, opts) => push(msg, { ...(opts || {}), type: 'success' }),
-    error: (msg, opts) => push(msg, { ...(opts || {}), type: 'error' }),
-    info: (msg, opts) => push(msg, { ...(opts || {}), type: 'info' }),
+    error:   (msg, opts) => push(msg, { ...(opts || {}), type: 'error' }),
+    info:    (msg, opts) => push(msg, { ...(opts || {}), type: 'info' }),
     warning: (msg, opts) => push(msg, { ...(opts || {}), type: 'warning' }),
   }), [push, remove])
 
@@ -74,8 +74,8 @@ export function ToastProvider({ children }) {
             {toasts.map((t) => (
               <div
                 key={t.id}
+                className={toastClass(t.type)}
                 style={{
-                  ...toastStyle(t.type),
                   borderRadius: 14,
                   padding: '12px 12px',
                   boxShadow: '0 10px 28px rgba(0,0,0,0.14)',
@@ -122,4 +122,3 @@ export function useToast() {
   if (!ctx) throw new Error('useToast debe usarse dentro de ToastProvider')
   return ctx
 }
-

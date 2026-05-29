@@ -30,7 +30,7 @@ function FirmaPreview({ url, alt }) {
     <img
       src={url}
       alt={alt}
-      style={{ maxWidth: '100%', maxHeight: 72, border: '1px solid #E0E0E0', borderRadius: 8, background: '#FFF' }}
+      style={{ maxWidth: '100%', maxHeight: 72, border: '1px solid var(--border)', borderRadius: 8, background: '#FFF' }}
     />
   )
 }
@@ -181,20 +181,20 @@ export default function SeleccionEntregaStep({ onNext, onBack }) {
   return (
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 20 }}>
-        <p style={{ color: '#1a7a34', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>
+        <p style={{ color: 'var(--secco-green-dark)', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>
           Paso 1
         </p>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, margin: '0 0 6px' }}>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 600, margin: '0 0 6px' }}>
           Vincular registros existentes
         </h2>
-        <p style={{ margin: 0, color: '#6B6B6B', fontSize: 13, lineHeight: 1.45 }}>
+        <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 13, lineHeight: 1.45 }}>
           La entrega usa un cliente, vehículo, trabajo y firmas que ya estén en el sistema. No se crean datos nuevos en este paso.
         </p>
         <div className="s-divider" style={{ marginTop: 14 }} />
       </div>
 
       <div className="s-card" style={{ marginBottom: 16 }}>
-        <label className="s-label">Patente del vehículo <span style={{ color: '#FF453A' }}>*</span></label>
+        <label className="s-label">Patente del vehículo <span style={{ color: 'var(--destructive)' }}>*</span></label>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
             type="text"
@@ -208,7 +208,7 @@ export default function SeleccionEntregaStep({ onNext, onBack }) {
           <button
             type="button"
             className="s-btn-primary"
-            style={{ width: 'auto', padding: '0 18px', background: '#1a7a34', borderColor: '#1a7a34' }}
+            style={{ width: 'auto', padding: '0 18px', background: 'var(--secco-green-dark)', borderColor: 'var(--secco-green-dark)' }}
             disabled={buscando}
             onClick={() => buscarPatente()}
           >
@@ -221,19 +221,19 @@ export default function SeleccionEntregaStep({ onNext, onBack }) {
 
       {contexto?.vehiculo ? (
         <>
-          <div className="s-card" style={{ marginBottom: 16, background: '#FAFAFA' }}>
-            <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 800, color: '#1a7a34', textTransform: 'uppercase' }}>
+          <div className="s-card" style={{ marginBottom: 16, background: 'var(--card)' }}>
+            <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 800, color: 'var(--secco-green-dark)', textTransform: 'uppercase' }}>
               Vehículo encontrado
             </p>
             <p style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, fontFamily: 'monospace' }}>{contexto.patente}</p>
-            <p style={{ margin: 0, fontSize: 13, color: '#111114' }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--foreground)' }}>
               {[contexto.vehiculo.marca, contexto.vehiculo.modelo, contexto.vehiculo.anio].filter(Boolean).join(' · ')}
             </p>
           </div>
 
           {contexto.clientes.length > 1 ? (
             <SelectField
-              label={<>Cliente registrado <span style={{ color: '#FF453A' }}>*</span></>}
+              label={<>Cliente registrado <span style={{ color: 'var(--destructive)' }}>*</span></>}
               value={clienteId}
               onChange={onClienteChange}
               options={contexto.clientes.map((c) => ({
@@ -245,9 +245,9 @@ export default function SeleccionEntregaStep({ onNext, onBack }) {
             />
           ) : contexto.clientes[0] ? (
             <div className="s-card" style={{ marginBottom: 16 }}>
-              <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, color: '#6B6B6B' }}>CLIENTE</p>
+              <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)' }}>CLIENTE</p>
               <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{contexto.clientes[0].nombre}</p>
-              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B6B6B' }}>
+              <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted-foreground)' }}>
                 {[contexto.clientes[0].rut, contexto.clientes[0].telefono].filter(Boolean).join(' · ')}
               </p>
             </div>
@@ -256,7 +256,7 @@ export default function SeleccionEntregaStep({ onNext, onBack }) {
           )}
 
           <SelectField
-            label={<>Trabajo realizado (desde historial) <span style={{ color: '#FF453A' }}>*</span></>}
+            label={<>Trabajo realizado (desde historial) <span style={{ color: 'var(--destructive)' }}>*</span></>}
             value={trabajoId}
             onChange={(id) => {
               const t = contexto.trabajos.find((x) => x.id === id)
@@ -268,16 +268,16 @@ export default function SeleccionEntregaStep({ onNext, onBack }) {
           />
 
           {formData.trabajo_realizado ? (
-            <div style={{ marginBottom: 16, padding: 12, background: '#F5F5F5', borderRadius: 10, border: '1px solid #E0E0E0' }}>
-              <p style={{ margin: '0 0 6px', fontSize: 11, color: '#6B6B6B', fontWeight: 700 }}>Vista previa del trabajo</p>
-              <p style={{ margin: 0, fontSize: 12, color: '#111114', whiteSpace: 'pre-wrap', lineHeight: 1.45, maxHeight: 120, overflow: 'auto' }}>
+            <div style={{ marginBottom: 16, padding: 12, background: 'var(--card)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <p style={{ margin: '0 0 6px', fontSize: 11, color: 'var(--muted-foreground)', fontWeight: 700 }}>Vista previa del trabajo</p>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--foreground)', whiteSpace: 'pre-wrap', lineHeight: 1.45, maxHeight: 120, overflow: 'auto' }}>
                 {formData.trabajo_realizado}
               </p>
             </div>
           ) : null}
 
           <SelectField
-            label={<>Firma del cliente (registro previo) <span style={{ color: '#FF453A' }}>*</span></>}
+            label={<>Firma del cliente (registro previo) <span style={{ color: 'var(--destructive)' }}>*</span></>}
             value={firmaClienteId}
             onChange={(id) => aplicarFirmaCliente(contexto.firmasCliente.find((f) => f.id === id))}
             options={firmaClienteOpts}
@@ -291,7 +291,7 @@ export default function SeleccionEntregaStep({ onNext, onBack }) {
           ) : null}
 
           <SelectField
-            label={<>Responsable SECCO (equipo) <span style={{ color: '#FF453A' }}>*</span></>}
+            label={<>Responsable SECCO (equipo) <span style={{ color: 'var(--destructive)' }}>*</span></>}
             value={tecnicoId}
             onChange={onTecnicoChange}
             options={tecnicoOpts}
@@ -300,7 +300,7 @@ export default function SeleccionEntregaStep({ onNext, onBack }) {
           />
 
           <SelectField
-            label={<>Firma SECCO (registro previo) <span style={{ color: '#FF453A' }}>*</span></>}
+            label={<>Firma SECCO (registro previo) <span style={{ color: 'var(--destructive)' }}>*</span></>}
             value={firmaSeccoId}
             onChange={(id) => aplicarFirmaSecco(contexto.firmasSecco.find((f) => f.id === id))}
             options={firmaSeccoOpts}
@@ -311,13 +311,13 @@ export default function SeleccionEntregaStep({ onNext, onBack }) {
             <div style={{ marginBottom: 16 }}>
               <FirmaPreview url={firmaSeccoSel.preview} alt="Firma SECCO" />
               {firmaSeccoSel.nombre ? (
-                <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6B6B6B' }}>{firmaSeccoSel.nombre}</p>
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted-foreground)' }}>{firmaSeccoSel.nombre}</p>
               ) : null}
             </div>
           ) : null}
 
           {!trabajoOpts.length || !firmaClienteOpts.length || !firmaSeccoOpts.length ? (
-            <p style={{ fontSize: 12, color: '#a98225', lineHeight: 1.45, marginBottom: 16 }}>
+            <p style={{ fontSize: 12, color: 'var(--secco-gold)', lineHeight: 1.45, marginBottom: 16 }}>
               Faltan registros previos (OT, cotización, acta de ingreso o entrega con firmas). Completa primero el flujo de ingreso/OT en el taller.
             </p>
           ) : null}
@@ -325,7 +325,7 @@ export default function SeleccionEntregaStep({ onNext, onBack }) {
       ) : null}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
-        <button type="button" className="s-btn-primary" style={{ background: '#1a7a34', borderColor: '#1a7a34' }} onClick={handleSubmit}>
+        <button type="button" className="s-btn-primary" style={{ background: 'var(--secco-green-dark)', borderColor: 'var(--secco-green-dark)' }} onClick={handleSubmit}>
           Continuar
         </button>
         {onBack ? (

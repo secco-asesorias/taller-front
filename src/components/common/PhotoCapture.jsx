@@ -39,7 +39,7 @@ export default function PhotoCapture({ label, onChange, preview, required = fals
       {label && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
           <span className="s-label" style={{ marginBottom: 0 }}>{label}</span>
-          {required && <span style={{ color: '#FF453A', fontSize: 12 }}>*</span>}
+          {required && <span style={{ color: 'var(--destructive)', fontSize: 12 }}>*</span>}
         </div>
       )}
 
@@ -54,7 +54,7 @@ export default function PhotoCapture({ label, onChange, preview, required = fals
                 height: 180,
                 objectFit: 'cover',
                 borderRadius: 12,
-                border: '1px solid #E0E0E0',
+                border: '1px solid var(--border)',
                 display: 'block',
               }}
             />
@@ -65,8 +65,8 @@ export default function PhotoCapture({ label, onChange, preview, required = fals
                 position: 'absolute',
                 top: 10,
                 right: 10,
-                background: '#FF453A',
-                color: '#FFFFFF',
+                background: 'var(--destructive)',
+                color: 'var(--background)',
                 border: 'none',
                 borderRadius: '50%',
                 width: 28,
@@ -87,13 +87,13 @@ export default function PhotoCapture({ label, onChange, preview, required = fals
                 bottom: 10,
                 left: 10,
                 background: 'rgba(255,255,255,0.92)',
-                color: '#a98225',
+                color: 'var(--secco-gold)',
                 fontSize: 11,
                 fontWeight: 600,
                 padding: '3px 8px',
                 borderRadius: 6,
                 letterSpacing: '0.4px',
-                border: '1px solid rgba(169,130,37,0.25)',
+                border: '1px solid var(--secco-gold-30)',
               }}
             >
               ✓ Foto tomada
@@ -110,7 +110,7 @@ export default function PhotoCapture({ label, onChange, preview, required = fals
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
-              background: '#F5F5F5',
+              background: 'var(--card)',
               border: '1.5px dashed #E0E0E0',
               borderRadius: 12,
               pointerEvents: 'none',
@@ -128,7 +128,7 @@ export default function PhotoCapture({ label, onChange, preview, required = fals
             ) : (
               <>
                 <span style={{ fontSize: 28 }}>📷</span>
-                <span style={{ color: '#6B6B6B', fontSize: 13, fontWeight: 500 }}>Galería o cámara</span>
+                <span style={{ color: 'var(--muted-foreground)', fontSize: 13, fontWeight: 500 }}>Galería o cámara</span>
               </>
             )}
           </div>

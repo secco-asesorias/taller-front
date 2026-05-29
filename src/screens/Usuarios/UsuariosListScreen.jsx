@@ -4,6 +4,7 @@ import { usuarioService } from '../../services/usuarioService'
 import { useToast } from '../../components/common/ToastProvider'
 import { useRol, ROL_ETIQUETAS } from '../../context/AuthContext'
 import { unwrapApiList } from '../../lib/unwrapApiList'
+import { useMobile } from '../../hooks/useMobile'
 
 const ROLES = [
   { value: 'admin', label: ROL_ETIQUETAS.admin },
@@ -11,14 +12,10 @@ const ROLES = [
   { value: 'tecnico', label: ROL_ETIQUETAS.tecnico },
 ]
 
-function rolBadgeStyle(rol) {
-  if (rol === 'admin') {
-    return { background: 'rgba(30,58,138,0.10)', color: '#1e3a8a', border: '1px solid rgba(30,58,138,0.25)' }
-  }
-  if (rol === 'recepcionista') {
-    return { background: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' }
-  }
-  return { background: 'rgba(52,199,89,0.12)', color: '#1a7a34', border: '1px solid rgba(52,199,89,0.3)' }
+function rolBadgeClass(rol) {
+  if (rol === 'admin')         return 'status-badge-info'
+  if (rol === 'recepcionista') return 'status-badge-activa'
+  return 'status-badge-cerrada'
 }
 
 const FORM_INICIAL = {
@@ -31,6 +28,7 @@ const FORM_INICIAL = {
 export default function UsuariosListScreen() {
   const toast = useToast()
   const { esAdmin, cargando: cargandoRol } = useRol()
+  const isMobile = useMobile()
   const [usuarios, setUsuarios] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
@@ -119,7 +117,7 @@ export default function UsuariosListScreen() {
   if (cargandoRol) {
     return (
       <div style={{ padding: '48px 16px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6B6B', fontSize: 14 }}>Verificando permisos…</p>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Verificando permisos…</p>
       </div>
     )
   }
@@ -129,7 +127,7 @@ export default function UsuariosListScreen() {
   }
 
   return (
-    <div style={{ padding: '14px 12px 40px' }}>
+    <div style={{ padding: isMobile ? '10px 8px 40px' : '14px 12px 40px' }}>
       <style>{`
         .usr-list { display: grid; grid-template-columns: 1fr; gap: 10px; }
         @media (min-width: 820px) { .usr-list { grid-template-columns: 1fr 1fr; gap: 12px; } }
@@ -138,11 +136,11 @@ export default function UsuariosListScreen() {
 
       <div className="usr-toolbar">
         <div style={{ minWidth: 0 }}>
-          <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 800, margin: 0 }}>Usuarios del taller</h2>
-          <p style={{ margin: '4px 0 0', color: '#6B6B6B', fontSize: 12, lineHeight: 1.45 }}>
+          <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 800, margin: 0 }}>Usuarios del taller</h2>
+          <p style={{ margin: '4px 0 0', color: 'var(--muted-foreground)', fontSize: 12, lineHeight: 1.45 }}>
             Personal con acceso al sistema (admin, recepción, técnicos). Los clientes se gestionan en Clientes.
           </p>
-          <p style={{ margin: '6px 0 0', color: '#6B6B6B', fontSize: 12 }}>
+          <p style={{ margin: '6px 0 0', color: 'var(--muted-foreground)', fontSize: 12 }}>
             {loading ? 'Cargando…' : `${filtrados.length} usuario${filtrados.length === 1 ? '' : 's'}`}
           </p>
         </div>
@@ -169,7 +167,7 @@ export default function UsuariosListScreen() {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px 0' }}>
-          <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando personal…</p>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Cargando personal…</p>
         </div>
       ) : (
         <div className="usr-list">
@@ -178,30 +176,24 @@ export default function UsuariosListScreen() {
               key={u.id || u.email}
               style={{
                 padding: 16,
-                border: '1.5px solid #E0E0E0',
+                border: '1.5px solid var(--border)',
                 borderRadius: 14,
-                background: '#FFFFFF',
+                background: 'var(--background)',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ margin: '0 0 4px', color: '#111114', fontSize: 15, fontWeight: 700 }}>
+                  <p style={{ margin: '0 0 4px', color: 'var(--foreground)', fontSize: 15, fontWeight: 700 }}>
                     {u.nombre || 'Sin nombre'}
                   </p>
-                  <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {u.email || '—'}
                   </p>
                 </div>
                 <span
-                  style={{
-                    flexShrink: 0,
-                    fontSize: 11,
-                    fontWeight: 800,
-                    padding: '4px 10px',
-                    borderRadius: 8,
-                    ...rolBadgeStyle(u.rol),
-                  }}
+                  className={rolBadgeClass(u.rol)}
+                  style={{ flexShrink: 0, fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 8 }}
                 >
                   {ROL_ETIQUETAS[u.rol] || u.rol || '—'}
                 </span>
@@ -210,7 +202,7 @@ export default function UsuariosListScreen() {
           ))}
           {!filtrados.length && (
             <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '48px 0' }}>
-              <p style={{ color: '#6B6B6B', fontSize: 14 }}>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>
                 {filtro ? 'Sin resultados para tu búsqueda' : 'No hay usuarios registrados'}
               </p>
             </div>
@@ -247,22 +239,22 @@ export default function UsuariosListScreen() {
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
-                background: '#FFFFFF',
-                border: '1.5px solid #E0E0E0',
+                background: 'var(--background)',
+                border: '1.5px solid var(--border)',
                 boxSizing: 'border-box',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 12, flexShrink: 0 }}>
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#111114' }}>Nuevo usuario</p>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B6B6B' }}>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--foreground)' }}>Nuevo usuario</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted-foreground)' }}>
                     Se creará la cuenta de acceso al taller.
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => !saving && setModalOpen(false)}
-                  style={{ flexShrink: 0, background: 'transparent', border: 'none', fontSize: 22, cursor: 'pointer', color: '#6B6B6B', lineHeight: 1, padding: 0 }}
+                  style={{ flexShrink: 0, background: 'transparent', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--muted-foreground)', lineHeight: 1, padding: 0 }}
                   aria-label="Cerrar"
                 >
                   ×
@@ -271,7 +263,7 @@ export default function UsuariosListScreen() {
 
               <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
               <div style={{ marginBottom: 14 }}>
-                <label className="s-label">Nombre completo <span style={{ color: '#FF453A' }}>*</span></label>
+                <label className="s-label">Nombre completo <span style={{ color: 'var(--destructive)' }}>*</span></label>
                 <input
                   type="text"
                   className={`s-input ${formErrores.nombre ? 's-input-err' : ''}`}
@@ -284,7 +276,7 @@ export default function UsuariosListScreen() {
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                <label className="s-label">Correo <span style={{ color: '#FF453A' }}>*</span></label>
+                <label className="s-label">Correo <span style={{ color: 'var(--destructive)' }}>*</span></label>
                 <input
                   type="email"
                   className={`s-input ${formErrores.email ? 's-input-err' : ''}`}
@@ -297,7 +289,7 @@ export default function UsuariosListScreen() {
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                <label className="s-label">Contraseña temporal <span style={{ color: '#FF453A' }}>*</span></label>
+                <label className="s-label">Contraseña temporal <span style={{ color: 'var(--destructive)' }}>*</span></label>
                 <input
                   type="password"
                   className={`s-input ${formErrores.password ? 's-input-err' : ''}`}
@@ -310,7 +302,7 @@ export default function UsuariosListScreen() {
               </div>
 
               <div style={{ marginBottom: 4 }}>
-                <label className="s-label">Rol <span style={{ color: '#FF453A' }}>*</span></label>
+                <label className="s-label">Rol <span style={{ color: 'var(--destructive)' }}>*</span></label>
                 <select
                   className={`s-input ${formErrores.rol ? 's-input-err' : ''}`}
                   value={form.rol}
@@ -321,7 +313,7 @@ export default function UsuariosListScreen() {
                   ))}
                 </select>
                 {formErrores.rol ? <p className="s-error">{formErrores.rol}</p> : null}
-                <p style={{ margin: '8px 0 0', fontSize: 11, color: '#6B6B6B', lineHeight: 1.4 }}>
+                <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--muted-foreground)', lineHeight: 1.4 }}>
                   Admin: gestión completa. Recepción: actas y cotizaciones. Técnico: diagnósticos y OT.
                 </p>
               </div>
@@ -333,7 +325,7 @@ export default function UsuariosListScreen() {
                 gap: 10,
                 marginTop: 16,
                 paddingTop: 12,
-                borderTop: '1px solid #E0E0E0',
+                borderTop: '1px solid var(--border)',
               }}>
                 <button
                   type="button"

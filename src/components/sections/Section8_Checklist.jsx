@@ -29,7 +29,7 @@ function buildChecklist(formData) {
       id: 'danos',
       label: 'Daños preexistentes registrados',
       ok: !!formData.estado_exterior,
-      detalle: !formData.estado_exterior ? 'No se registrá el estado exterior' : null,
+      detalle: !formData.estado_exterior ? 'No se registra el estado exterior' : null,
     },
     {
       id: 'firma_cliente',
@@ -48,8 +48,8 @@ export default function Section8_Checklist({ onFinish, onBack, loading }) {
   return (
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
-        <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>Revisión final</p>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>Checklist de Validación</h2>
+        <p style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>Revisión final</p>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>Checklist de Validación</h2>
         <div className="s-divider" />
       </div>
 
@@ -59,23 +59,23 @@ export default function Section8_Checklist({ onFinish, onBack, loading }) {
           <div key={item.id}
             style={{
               display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 16px', borderRadius: 12,
-              background: '#FFFFFF',
-              border: `1px solid ${item.ok ? 'rgba(169,130,37,0.35)' : 'rgba(255,69,58,0.3)'}`,
+              background: 'var(--background)',
+              border: `1px solid ${item.ok ? 'var(--secco-gold-30)' : 'rgba(255,69,58,0.3)'}`,
             }}
             className={item.ok ? 'check-animate' : ''}
           >
             <span style={{
               width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 12, fontWeight: 700, flexShrink: 0, marginTop: 1,
-              background: item.ok ? '#a98225' : 'transparent',
+              background: item.ok ? 'var(--secco-gold)' : 'transparent',
               border: item.ok ? 'none' : '1.5px solid #FF453A',
-              color: item.ok ? '#FFFFFF' : '#FF453A',
+              color: item.ok ? 'var(--background)' : 'var(--destructive)',
             }}>
               {item.ok ? '' : ''}
             </span>
             <div>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: item.ok ? '#111114' : '#FF453A' }}>{item.label}</p>
-              {item.detalle && <p style={{ margin: '3px 0 0', fontSize: 12, color: '#FF453A' }}>{item.detalle}</p>}
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: item.ok ? 'var(--foreground)' : 'var(--destructive)' }}>{item.label}</p>
+              {item.detalle && <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--destructive)' }}>{item.detalle}</p>}
             </div>
           </div>
         ))}
@@ -83,14 +83,14 @@ export default function Section8_Checklist({ onFinish, onBack, loading }) {
 
       {/* Estado global */}
       {!todosOk ? (
-        <div style={{ background: 'rgba(255,69,58,0.06)', border: '1px solid rgba(255,69,58,0.25)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
-          <p style={{ color: '#FF453A', fontWeight: 600, fontSize: 14, margin: '0 0 4px' }}>No se puede cerrar el acta</p>
-          <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0 }}>Corrige los Í­tems marcados en rojo antes de continuar.</p>
+        <div style={{ background: 'var(--secco-red-08)', border: '1px solid var(--secco-red-25)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+          <p style={{ color: 'var(--destructive)', fontWeight: 600, fontSize: 14, margin: '0 0 4px' }}>No se puede cerrar el acta</p>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: 0 }}>Corrige los Í­tems marcados en rojo antes de continuar.</p>
         </div>
       ) : (
-        <div style={{ background: 'rgba(169,130,37,0.06)', border: '1px solid rgba(169,130,37,0.3)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
-          <p style={{ color: '#a98225', fontWeight: 600, fontSize: 14, margin: '0 0 4px' }}>Acta lista para cerrar</p>
-          <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0 }}>Todos los campos requeridos están completos.</p>
+        <div style={{ background: 'var(--secco-gold-10)', border: '1px solid var(--secco-gold-30)', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+          <p style={{ color: 'var(--secco-gold)', fontWeight: 600, fontSize: 14, margin: '0 0 4px' }}>Acta lista para cerrar</p>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: 0 }}>Todos los campos requeridos están completos.</p>
         </div>
       )}
 
@@ -99,7 +99,7 @@ export default function Section8_Checklist({ onFinish, onBack, loading }) {
         borderLeft: '3px solid #a98225', background: 'rgba(169,130,37,0.05)',
         borderRadius: '0 10px 10px 0', padding: '14px 16px', marginBottom: 24,
       }}>
-        <p style={{ color: '#111114', fontStyle: 'italic', fontSize: 13, margin: 0, lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--foreground)', fontStyle: 'italic', fontSize: 13, margin: 0, lineHeight: 1.6 }}>
           "SECCO no acepta ni permite incentivos externos que alteren el diagnóstico o recomendación técnica."
         </p>
       </div>

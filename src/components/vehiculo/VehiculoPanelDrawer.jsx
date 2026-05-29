@@ -26,23 +26,18 @@ function RowButton({ onClick, title, subtitle, meta, badge }) {
     <button type="button" className={styles.rowBtn} onClick={onClick}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#1e3a8a' }}>{title}</p>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--secco-gold)' }}>{title}</p>
           {subtitle ? (
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#111114' }}>{subtitle}</p>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--foreground)' }}>{subtitle}</p>
           ) : null}
           {meta ? (
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6b6b6b' }}>{meta}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--muted-foreground)' }}>{meta}</p>
           ) : null}
         </div>
         {badge ? (
-          <span style={{
-            fontSize: 10,
-            fontWeight: 700,
-            padding: '3px 8px',
-            borderRadius: 20,
-            flexShrink: 0,
-            ...badge.style,
-          }}
+          <span
+            className={badge.className}
+            style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 20, flexShrink: 0 }}
           >
             {badge.text}
           </span>
@@ -55,7 +50,7 @@ function RowButton({ onClick, title, subtitle, meta, badge }) {
 function ListaTab({ items, render, empty, error }) {
   if (error) return <p className="s-error" style={{ marginBottom: 12 }}>{error}</p>
   if (!items?.length) {
-    return <p style={{ color: '#6b6b6b', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>{empty}</p>
+    return <p style={{ color: 'var(--muted-foreground)', fontSize: 13, textAlign: 'center', padding: '24px 0' }}>{empty}</p>
   }
   return <div>{items.map(render)}</div>
 }
@@ -66,12 +61,12 @@ function ResumenTab({ data, clientes, counts, onSelectTab, onNuevaActa, onNuevaE
     <div>
       {clientes.length > 0 ? (
         <div style={{ marginBottom: 16 }}>
-          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 800, color: '#a98225', textTransform: 'uppercase' }}>Clientes</p>
+          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 800, color: 'var(--secco-gold)', textTransform: 'uppercase' }}>Clientes</p>
           {clientes.map((c) => (
-            <div key={c.id} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 10, border: '1px solid #e0e0e0', marginBottom: 8 }}>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#111114' }}>{c.nombre || '—'}</p>
-              {c.telefono ? <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b6b6b' }}>{c.telefono}</p> : null}
-              {c.email ? <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6b6b6b' }}>{c.email}</p> : null}
+            <div key={c.id} style={{ padding: '10px 12px', background: 'var(--card)', borderRadius: 10, border: '1px solid var(--border)', marginBottom: 8 }}>
+              <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--foreground)' }}>{c.nombre || '—'}</p>
+              {c.telefono ? <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted-foreground)' }}>{c.telefono}</p> : null}
+              {c.email ? <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted-foreground)' }}>{c.email}</p> : null}
             </div>
           ))}
         </div>
@@ -79,12 +74,12 @@ function ResumenTab({ data, clientes, counts, onSelectTab, onNuevaActa, onNuevaE
 
       {veh.vin ? (
         <div style={{ marginBottom: 16 }}>
-          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 800, color: '#a98225', textTransform: 'uppercase' }}>Datos</p>
-          <p style={{ margin: 0, fontSize: 12, color: '#111114' }}><strong>VIN:</strong> {veh.vin}</p>
+          <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 800, color: 'var(--secco-gold)', textTransform: 'uppercase' }}>Datos</p>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--foreground)' }}><strong>VIN:</strong> {veh.vin}</p>
         </div>
       ) : null}
 
-      <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 800, color: '#a98225', textTransform: 'uppercase' }}>Accesos rápidos</p>
+      <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 800, color: 'var(--secco-gold)', textTransform: 'uppercase' }}>Accesos rápidos</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {[
           { label: 'Ingreso', count: counts.actas, tab: 'actas' },
@@ -100,8 +95,8 @@ function ResumenTab({ data, clientes, counts, onSelectTab, onNuevaActa, onNuevaE
             style={{ marginBottom: 0, textAlign: 'center' }}
             onClick={() => onSelectTab(item.tab)}
           >
-            <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: '#1e3a8a' }}>{item.count}</p>
-            <p style={{ margin: '4px 0 0', fontSize: 11, color: '#6b6b6b' }}>{item.label}</p>
+            <p style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--secco-gold)' }}>{item.count}</p>
+            <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--muted-foreground)' }}>{item.label}</p>
           </button>
         ))}
       </div>
@@ -111,7 +106,12 @@ function ResumenTab({ data, clientes, counts, onSelectTab, onNuevaActa, onNuevaE
           + Acta de ingreso
         </button>
         {onNuevaEntrega ? (
-          <button type="button" className="s-btn-primary" style={{ width: '100%', background: '#1a7a34', borderColor: '#1a7a34' }} onClick={onNuevaEntrega}>
+          <button
+            type="button"
+            className="s-btn-primary"
+            style={{ width: '100%', background: 'var(--secco-green)', borderColor: 'var(--secco-green)' }}
+            onClick={onNuevaEntrega}
+          >
             + Acta de entrega
           </button>
         ) : null}
@@ -120,19 +120,19 @@ function ResumenTab({ data, clientes, counts, onSelectTab, onNuevaActa, onNuevaE
   )
 }
 
-function actaBadgeStyle(status) {
+function actaBadgeClass(status) {
   const s = String(status || '').toLowerCase()
-  if (s === 'cerrada') return { background: 'rgba(52,199,89,0.12)', color: '#1a7a34', border: '1px solid rgba(52,199,89,0.3)' }
-  if (s === 'borrador') return { background: 'rgba(107,107,107,0.10)', color: '#6b6b6b', border: '1px solid #e0e0e0' }
-  return { background: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' }
+  if (s === 'cerrada')  return 'status-badge-cerrada'
+  if (s === 'borrador') return 'status-badge-borrador'
+  return 'status-badge-activa'
 }
 
-function cotBadgeStyle(status) {
+function cotBadgeClass(status) {
   const s = String(status || '').toLowerCase()
-  if (s === 'aprobada') return { background: 'rgba(34,139,80,0.12)', color: '#228b50', border: '1px solid rgba(34,139,80,0.3)' }
-  if (s === 'rechazada') return { background: 'rgba(255,69,58,0.10)', color: '#ff453a', border: '1px solid rgba(255,69,58,0.25)' }
-  if (s === 'enviada') return { background: '#a98225', color: '#fff', border: 'none' }
-  return { background: 'rgba(107,107,107,0.10)', color: '#6b6b6b', border: '1px solid #e0e0e0' }
+  if (s === 'aprobada')  return 'status-badge-aprobada'
+  if (s === 'rechazada') return 'status-badge-rechazada'
+  if (s === 'enviada')   return 'status-badge-enviada'
+  return 'status-badge-borrador'
 }
 
 export default function VehiculoPanelDrawer({ patente, onClose }) {
@@ -202,14 +202,14 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
       <aside className={styles.drawer} role="dialog" aria-modal="true" aria-label={`Vehículo ${patente}`}>
         <header className={styles.header}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: '#6b6b6b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+            <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
               Vehículo
             </p>
-            <p style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, fontFamily: 'monospace', letterSpacing: '2px', color: '#111114' }}>
+            <p style={{ margin: '4px 0 0', fontSize: 22, fontWeight: 800, fontFamily: 'monospace', letterSpacing: '2px', color: 'var(--foreground)' }}>
               {patente}
             </p>
             {!loading && data ? (
-              <p style={{ margin: '6px 0 0', fontSize: 13, color: '#6b6b6b', lineHeight: 1.4 }}>
+              <p style={{ margin: '6px 0 0', fontSize: 13, color: 'var(--muted-foreground)', lineHeight: 1.4 }}>
                 {tituloVeh}
                 {veh.color ? ` · ${veh.color}` : ''}
               </p>
@@ -222,7 +222,7 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
 
         <div className={styles.body}>
           {loading ? (
-            <p style={{ color: '#6b6b6b', fontSize: 14, textAlign: 'center', padding: '32px 0' }}>Cargando…</p>
+            <p style={{ color: 'var(--muted-foreground)', fontSize: 14, textAlign: 'center', padding: '32px 0' }}>Cargando…</p>
           ) : null}
 
           {error ? (
@@ -258,14 +258,17 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
               ) : null}
 
               {data.borradorEntrega ? (
-                <div className={`${styles.banner} ${styles.bannerInfo}`} style={{ borderColor: 'rgba(26,122,52,0.35)', background: 'rgba(26,122,52,0.08)' }}>
-                  <strong style={{ color: '#1a7a34' }}>Borrador de entrega activo</strong>
+                <div
+                  className={`${styles.banner} ${styles.bannerInfo}`}
+                  style={{ borderColor: 'var(--secco-green-30)', background: 'var(--secco-green-12)' }}
+                >
+                  <strong style={{ color: 'var(--secco-green-dark)' }}>Borrador de entrega activo</strong>
                   {' — '}
                   ENT-{data.borradorEntrega.numero_acta_entrega ?? data.borradorEntrega.numero_acta ?? '—'}
                   <button
                     type="button"
                     className="s-btn-primary"
-                    style={{ display: 'block', marginTop: 8, width: '100%', padding: '8px 12px', fontSize: 12, background: '#1a7a34', borderColor: '#1a7a34' }}
+                    style={{ display: 'block', marginTop: 8, width: '100%', padding: '8px 12px', fontSize: 12, background: 'var(--secco-green)', borderColor: 'var(--secco-green)' }}
                     onClick={() => go(`/actas-entrega/${data.borradorEntrega.id}/editar`)}
                   >
                     Continuar entrega
@@ -314,10 +317,7 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
                       meta={acta.fecha_ingreso
                         ? new Date(acta.fecha_ingreso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })
                         : null}
-                      badge={{
-                        text: acta.status || '—',
-                        style: actaBadgeStyle(acta.status),
-                      }}
+                      badge={{ text: acta.status || '—', className: actaBadgeClass(acta.status) }}
                       onClick={() => {
                         const s = String(acta.status || '').toLowerCase()
                         if (s === 'borrador' || s === 'activa') go(`/actas/${acta.id}/editar`)
@@ -345,10 +345,7 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
                         meta={fecha
                           ? new Date(fecha).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })
                           : null}
-                        badge={{
-                          text: acta.status || '—',
-                          style: actaBadgeStyle(acta.status),
-                        }}
+                        badge={{ text: acta.status || '—', className: actaBadgeClass(acta.status) }}
                         onClick={() => {
                           if (esBorrador) go(`/actas-entrega/${acta.id}/editar`)
                           else go(`/actas-entrega/${acta.id}`)
@@ -370,10 +367,7 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
                       title={`DG-${diag.numero_diagnostico || '—'}`}
                       subtitle={diag.tipo_mantencion ? `Mantención: ${diag.tipo_mantencion}` : diag.actas?.clientes?.nombre}
                       meta={diag.actas?.numero_acta ? `Acta #${diag.actas.numero_acta}` : null}
-                      badge={{
-                        text: diag.status || '—',
-                        style: { background: 'rgba(169,130,37,0.12)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' },
-                      }}
+                      badge={{ text: diag.status || '—', className: 'status-badge-activa' }}
                       onClick={() => go(`/diagnosticos/${diag.id}`)}
                     />
                   )}
@@ -391,10 +385,7 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
                       title={cot.numero_cotizacion ? `Cotización #${cot.numero_cotizacion}` : 'Cotización'}
                       subtitle={cot.clientes?.nombre || cot.actas?.clientes?.nombre}
                       meta={cot.actas?.numero_acta ? `Acta #${cot.actas.numero_acta}` : null}
-                      badge={{
-                        text: COT_STATUS[cot.status] || cot.status || '—',
-                        style: cotBadgeStyle(cot.status),
-                      }}
+                      badge={{ text: COT_STATUS[cot.status] || cot.status || '—', className: cotBadgeClass(cot.status) }}
                       onClick={() => go(`/cotizaciones/${cot.id}`)}
                     />
                   )}
@@ -404,7 +395,7 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
               {tab === 'ordenes' ? (
                 <>
                   {data.ordenesFiltradoLocal ? (
-                    <p style={{ fontSize: 11, color: '#aaaaaa', margin: '0 0 10px', lineHeight: 1.45 }}>
+                    <p style={{ fontSize: 11, color: 'var(--placeholder)', margin: '0 0 10px', lineHeight: 1.45 }}>
                       Órdenes filtradas del listado general (no hay búsqueda por patente en el API).
                     </p>
                   ) : null}
@@ -418,10 +409,7 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
                         title={`OT #${ot.numero_ot || '—'}`}
                         subtitle={ot.clientes?.nombre}
                         meta={ot.tecnico_nombre ? `Técnico: ${ot.tecnico_nombre}` : null}
-                        badge={{
-                          text: String(ot.status || '').replaceAll('_', ' '),
-                          style: { background: 'rgba(30,58,138,0.08)', color: '#1e3a8a', border: '1px solid rgba(30,58,138,0.25)' },
-                        }}
+                        badge={{ text: String(ot.status || '').replaceAll('_', ' '), className: 'status-badge-info' }}
                         onClick={() => go(`/ordenes-trabajo/${ot.id}`)}
                       />
                     )}
@@ -429,7 +417,7 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
                 </>
               ) : null}
 
-              <p style={{ marginTop: 16, fontSize: 11, color: '#aaaaaa', lineHeight: 1.45 }}>
+              <p style={{ marginTop: 16, fontSize: 11, color: 'var(--placeholder)', lineHeight: 1.45 }}>
                 Las fotos solo se gestionan dentro de cada acta o diagnóstico; no hay listado por patente.
               </p>
             </>

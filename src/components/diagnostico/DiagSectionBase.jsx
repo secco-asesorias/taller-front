@@ -22,9 +22,9 @@ function estadoStyle(active, value) {
     cursor: 'pointer',
     fontFamily: 'inherit',
     transition: 'all 150ms',
-    border: active ? `1.5px solid ${urgent ? '#FF453A' : '#a98225'}` : '1.5px solid #E0E0E0',
-    background: active ? (urgent ? 'rgba(255,69,58,0.08)' : 'rgba(169,130,37,0.10)') : '#FFFFFF',
-    color: active ? (urgent ? '#FF453A' : '#a98225') : '#6B6B6B',
+    border: active ? `1.5px solid ${urgent ? 'var(--destructive)' : 'var(--secco-gold)'}` : '1.5px solid #E0E0E0',
+    background: active ? (urgent ? 'var(--secco-red-08)' : 'var(--secco-gold-10)') : 'var(--background)',
+    color: active ? (urgent ? 'var(--destructive)' : 'var(--secco-gold)') : 'var(--muted-foreground)',
   }
 }
 
@@ -142,17 +142,17 @@ export default function DiagSectionBase({ config, onNext, onBack, nextLabel = 'C
   return (
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 24 }}>
-        <p style={{ display: 'inline-flex', background: '#a98225', color: '#FFFFFF', fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', margin: '0 0 8px', padding: '4px 8px', borderRadius: 6 }}>
+        <p style={{ display: 'inline-flex', background: 'var(--secco-gold)', color: 'var(--background)', fontSize: 11, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', margin: '0 0 8px', padding: '4px 8px', borderRadius: 6 }}>
           Técnico
         </p>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
           {config.titulo}
         </h2>
-        <p style={{ margin: '6px 0 0', color: '#6B6B6B', fontSize: 13 }}>
+        <p style={{ margin: '6px 0 0', color: 'var(--muted-foreground)', fontSize: 13 }}>
           {diagnosticoData.marca} {diagnosticoData.modelo} · {diagnosticoData.patente}
         </p>
         {autosave && (
-          <p style={{ margin: '8px 0 0', color: autosave === 'No se pudo guardar' ? '#FF453A' : '#a98225', fontSize: 12, fontWeight: 600 }}>
+          <p style={{ margin: '8px 0 0', color: autosave === 'No se pudo guardar' ? 'var(--destructive)' : 'var(--secco-gold)', fontSize: 12, fontWeight: 600 }}>
             {autosave}
           </p>
         )}
@@ -166,7 +166,7 @@ export default function DiagSectionBase({ config, onNext, onBack, nextLabel = 'C
 
           return (
             <div key={item} className="s-card" style={{ padding: 14 }}>
-              <p style={{ margin: '0 0 12px', color: '#111114', fontSize: 14, fontWeight: 600, lineHeight: 1.35 }}>
+              <p style={{ margin: '0 0 12px', color: 'var(--foreground)', fontSize: 14, fontWeight: 600, lineHeight: 1.35 }}>
                 {item}
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>

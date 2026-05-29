@@ -48,10 +48,10 @@ export default function Section3_Entrega({ onNext, onBack }) {
   return (
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
-        <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>
+        <p style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>
           Entrega
         </p>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
           Datos de entrega
         </h2>
         <div className="s-divider" />
@@ -60,7 +60,7 @@ export default function Section3_Entrega({ onNext, onBack }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
-            <label className="s-label">Fecha entrega <span style={{ color: '#FF453A' }}>*</span></label>
+            <label className="s-label">Fecha entrega <span style={{ color: 'var(--destructive)' }}>*</span></label>
             <input
               type="date"
               value={formData.fecha_entrega}
@@ -70,7 +70,7 @@ export default function Section3_Entrega({ onNext, onBack }) {
             {errores.fecha_entrega && <p className="s-error">{errores.fecha_entrega}</p>}
           </div>
           <div>
-            <label className="s-label">Hora entrega <span style={{ color: '#FF453A' }}>*</span></label>
+            <label className="s-label">Hora entrega <span style={{ color: 'var(--destructive)' }}>*</span></label>
             <input
               type="time"
               value={formData.hora_entrega}
@@ -82,7 +82,7 @@ export default function Section3_Entrega({ onNext, onBack }) {
         </div>
 
         <div className="s-card">
-          <label className="s-label">Kilometraje al entregar <span style={{ color: '#FF453A' }}>*</span></label>
+          <label className="s-label">Kilometraje al entregar <span style={{ color: 'var(--destructive)' }}>*</span></label>
           <div style={{ position: 'relative' }}>
             <input
               type="number"
@@ -94,7 +94,7 @@ export default function Section3_Entrega({ onNext, onBack }) {
               className={`s-input ${errores.kilometraje ? 's-input-err' : ''}`}
               style={{ paddingRight: 50 }}
             />
-            <span style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: '#6B6B6B', fontSize: 13, fontWeight: 500 }}>km</span>
+            <span style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', color: 'var(--muted-foreground)', fontSize: 13, fontWeight: 500 }}>km</span>
           </div>
           {errores.kilometraje && <p className="s-error">{errores.kilometraje}</p>}
           <div style={{ marginTop: 16 }}>
@@ -111,7 +111,7 @@ export default function Section3_Entrega({ onNext, onBack }) {
         </div>
 
         <div className="s-card">
-          <label className="s-label" style={{ marginBottom: 12 }}>Nivel de combustible <span style={{ color: '#FF453A' }}>*</span></label>
+          <label className="s-label" style={{ marginBottom: 12 }}>Nivel de combustible <span style={{ color: 'var(--destructive)' }}>*</span></label>
           <FuelSelector value={formData.combustible} onChange={(v) => updateForm({ combustible: v })} />
           {errores.combustible && <p className="s-error">{errores.combustible}</p>}
           <div style={{ marginTop: 16 }}>
@@ -128,7 +128,7 @@ export default function Section3_Entrega({ onNext, onBack }) {
         </div>
 
         <div>
-          <label className="s-label">Llaves entregadas <span style={{ color: '#FF453A' }}>*</span></label>
+          <label className="s-label">Llaves entregadas <span style={{ color: 'var(--destructive)' }}>*</span></label>
           <div style={{ display: 'flex', gap: 8 }}>
             {[0, 1, 2, 3, 4].map((n) => {
               const active = formData.llaves === n
@@ -146,8 +146,8 @@ export default function Section3_Entrega({ onNext, onBack }) {
                     cursor: 'pointer',
                     fontFamily: 'inherit',
                     border: active ? '1.5px solid #a98225' : '1.5px solid #E0E0E0',
-                    background: active ? '#a98225' : '#FFFFFF',
-                    color: active ? '#FFFFFF' : '#6B6B6B',
+                    background: active ? 'var(--secco-gold)' : 'var(--background)',
+                    color: active ? 'var(--background)' : 'var(--muted-foreground)',
                   }}
                 >
                   {n}
@@ -174,11 +174,11 @@ export default function Section3_Entrega({ onNext, onBack }) {
                     borderRadius: 12,
                     cursor: 'pointer',
                     border: checked ? '1.5px solid #a98225' : '1.5px solid #E0E0E0',
-                    background: '#FFFFFF',
+                    background: 'var(--background)',
                   }}
                 >
                   <input type="checkbox" className="s-checkbox" checked={checked} onChange={() => toggleDoc(doc.value)} />
-                  <span style={{ color: checked ? '#111114' : '#6B6B6B', fontSize: 15, fontWeight: 500 }}>{doc.label}</span>
+                  <span style={{ color: checked ? 'var(--foreground)' : 'var(--muted-foreground)', fontSize: 15, fontWeight: 500 }}>{doc.label}</span>
                 </label>
               )
             })}

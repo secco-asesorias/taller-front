@@ -43,10 +43,10 @@ export default function Section2_Vehiculo({ onNext, onBack, variant = 'ingreso' 
   return (
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
-        <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>
+        <p style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>
           Torre de Control
         </p>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
           Identificación del Vehí­culo
         </h2>
         <div className="s-divider" />
@@ -55,7 +55,7 @@ export default function Section2_Vehiculo({ onNext, onBack, variant = 'ingreso' 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {/* Marca */}
         <div>
-          <label className="s-label">Marca <span style={{ color: '#FF453A' }}>*</span></label>
+          <label className="s-label">Marca <span style={{ color: 'var(--destructive)' }}>*</span></label>
           <select
             value={formData.marca}
             onChange={(e) => handleChange('marca', e.target.value)}
@@ -70,7 +70,7 @@ export default function Section2_Vehiculo({ onNext, onBack, variant = 'ingreso' 
 
         {/* Modelo */}
         <div>
-          <label className="s-label">Modelo <span style={{ color: '#FF453A' }}>*</span></label>
+          <label className="s-label">Modelo <span style={{ color: 'var(--destructive)' }}>*</span></label>
           <input
             type="text"
             autoCapitalize="words"
@@ -86,7 +86,7 @@ export default function Section2_Vehiculo({ onNext, onBack, variant = 'ingreso' 
         {/* AÃ±o + Patente */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>
-            <label className="s-label">Año <span style={{ color: '#FF453A' }}>*</span></label>
+            <label className="s-label">Año <span style={{ color: 'var(--destructive)' }}>*</span></label>
             <select
               value={formData.anio}
               onChange={(e) => handleChange('anio', Number(e.target.value))}
@@ -100,7 +100,7 @@ export default function Section2_Vehiculo({ onNext, onBack, variant = 'ingreso' 
           </div>
 
           <div>
-            <label className="s-label">Patente <span style={{ color: '#FF453A' }}>*</span></label>
+            <label className="s-label">Patente <span style={{ color: 'var(--destructive)' }}>*</span></label>
             <input
               type="text"
               autoCapitalize="characters"
@@ -117,8 +117,8 @@ export default function Section2_Vehiculo({ onNext, onBack, variant = 'ingreso' 
         </div>
 
         {/* Opcionales */}
-        <div style={{ background: '#F5F5F5', border: '1px solid #E0E0E0', borderRadius: 14, padding: 18 }}>
-          <p style={{ color: '#6B6B6B', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 16, marginTop: 0 }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 16, marginTop: 0 }}>
             Datos opcionales
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

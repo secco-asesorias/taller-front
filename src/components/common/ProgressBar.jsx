@@ -12,9 +12,7 @@ const SECCIONES = [
 export default function ProgressBar({
   seccionActual,
   secciones = SECCIONES,
-  /** Paso más lejano ya alcanzado en esta sesión (permite volver y reavanzar sin saltar adelante). */
   maxSeccionAlcanzada = seccionActual,
-  /** Ir a un paso ya visitado (1…8). */
   onIrASeccion,
 }) {
   const pct = Math.round(((seccionActual - 1) / (secciones.length - 1)) * 100)
@@ -24,20 +22,20 @@ export default function ProgressBar({
   }
 
   return (
-    <div style={{ background: '#F5F5F5', borderBottom: '1px solid #E0E0E0' }} className="px-4 py-3">
+    <div style={{ background: 'var(--card)', borderBottom: '1px solid var(--border)' }} className="px-4 py-3">
       <div className="flex items-center justify-between mb-2">
-        <span style={{ color: '#6B6B6B', fontSize: 12, letterSpacing: '0.6px', textTransform: 'uppercase', fontWeight: 500 }}>
+        <span style={{ color: 'var(--muted-foreground)', fontSize: 12, letterSpacing: '0.6px', textTransform: 'uppercase', fontWeight: 500 }}>
           Sección {seccionActual} de {secciones.length}
         </span>
-        <span style={{ color: '#a98225', fontSize: 12, fontWeight: 600 }}>{pct}%</span>
+        <span style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 600 }}>{pct}%</span>
       </div>
 
-      <div style={{ width: '100%', height: 2, background: '#E0E0E0', borderRadius: 1, overflow: 'hidden', marginBottom: 14 }}>
+      <div style={{ width: '100%', height: 2, background: 'var(--border)', borderRadius: 1, overflow: 'hidden', marginBottom: 14 }}>
         <div
           style={{
             height: '100%',
             width: `${pct}%`,
-            background: '#a98225',
+            background: 'var(--secco-gold)',
             borderRadius: 1,
             transition: 'width 400ms ease',
           }}
@@ -63,10 +61,10 @@ export default function ProgressBar({
             marginBottom: 3,
             transition: 'all 200ms ease',
             ...(done
-              ? { background: '#a98225', color: '#FFFFFF', border: 'none' }
+              ? { background: 'var(--secco-gold)', color: 'var(--background)', border: 'none' }
               : active
-              ? { background: 'transparent', border: '2px solid #a98225', color: '#a98225' }
-              : { background: '#E0E0E0', color: '#6B6B6B', border: 'none' }),
+              ? { background: 'transparent', border: '2px solid var(--secco-gold)', color: 'var(--secco-gold)' }
+              : { background: 'var(--border)', color: 'var(--muted-foreground)', border: 'none' }),
             ...(clicable ? { cursor: 'pointer', padding: 0 } : {}),
             ...(!clicable && futuroSinVisitar && typeof onIrASeccion === 'function' ? { opacity: 0.55 } : {}),
           }
@@ -98,7 +96,7 @@ export default function ProgressBar({
                   fontSize: 9,
                   textAlign: 'center',
                   lineHeight: 1.2,
-                  color: done ? '#a98225' : active ? '#111114' : '#AAAAAA',
+                  color: done ? 'var(--secco-gold)' : active ? 'var(--foreground)' : 'var(--placeholder)',
                   fontWeight: active ? 600 : 400,
                   pointerEvents: 'none',
                 }}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FormProvider, mergeActaIntoInitialForm, useForm } from '../../context/FormContext'
 import ProgressBar from '../../components/common/ProgressBar'
+import { useMobile } from '../../hooks/useMobile'
 import Section1_Cliente from '../../components/sections/Section1_Cliente'
 import Section2_Vehiculo from '../../components/sections/Section2_Vehiculo'
 import Section3_Ingreso from '../../components/sections/Section3_Ingreso'
@@ -70,42 +71,42 @@ async function firmarFotosActaSiCorresponde(acta) {
 // ── Pantalla de éxito ──────────────────────────────────────────
 function ExitoScreen({ formData, onVolver }) {
   return (
-    <div className="fade-in" style={{ minHeight: '100svh', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-      <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(169,130,37,0.10)', border: '2px solid #a98225', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, marginBottom: 24, color: '#a98225' }}>
+    <div className="fade-in" style={{ minHeight: '100svh', background: 'var(--background)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+      <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--secco-gold-10)', border: '2px solid #a98225', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, marginBottom: 24, color: 'var(--secco-gold)' }}>
         ✓
       </div>
-      <h2 style={{ color: '#111114', fontSize: 22, fontWeight: 600, textAlign: 'center', margin: '0 0 8px' }}>
+      <h2 style={{ color: 'var(--foreground)', fontSize: 22, fontWeight: 600, textAlign: 'center', margin: '0 0 8px' }}>
         Acta completada
       </h2>
-      <p style={{ color: '#6B6B6B', fontSize: 14, textAlign: 'center', margin: '0 0 32px' }}>
+      <p style={{ color: 'var(--muted-foreground)', fontSize: 14, textAlign: 'center', margin: '0 0 32px' }}>
         El PDF se descargó automáticamente.
       </p>
 
       <div className="s-card" style={{ width: '100%', maxWidth: 380, marginBottom: 28 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div>
-            <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 16, color: '#111114' }}>
+            <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 16, color: 'var(--foreground)' }}>
               {formData.marca} {formData.modelo}
             </p>
-            <p style={{ margin: 0, fontSize: 13, color: '#6B6B6B' }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--muted-foreground)' }}>
               {formData.patente} · {formData.anio}
             </p>
           </div>
           {formData.numero_acta && (
-            <span style={{ background: '#a98225', color: '#FFFFFF', fontWeight: 700, fontSize: 12, padding: '4px 10px', borderRadius: 8 }}>
+            <span style={{ background: 'var(--secco-gold)', color: 'var(--background)', fontWeight: 700, fontSize: 12, padding: '4px 10px', borderRadius: 8 }}>
               #{formData.numero_acta}
             </span>
           )}
         </div>
-        <div style={{ borderTop: '1px solid #E0E0E0', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
           {[
             ['Cliente', formData.nombre],
             ['Fecha', formData.fecha_ingreso ? new Date(formData.fecha_ingreso + 'T12:00:00').toLocaleDateString('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }) : ''],
             ['Kilometraje', formData.kilometraje ? `${Number(formData.kilometraje).toLocaleString('es-CL')} km` : ''],
             ['Responsable', formData.nombre_responsable],
           ].filter(([, v]) => v).map(([k, v]) => (
-            <p key={k} style={{ margin: 0, fontSize: 13, color: '#6B6B6B' }}>
-              <span style={{ color: '#111114', fontWeight: 500 }}>{k}:</span> {v}
+            <p key={k} style={{ margin: 0, fontSize: 13, color: 'var(--muted-foreground)' }}>
+              <span style={{ color: 'var(--foreground)', fontWeight: 500 }}>{k}:</span> {v}
             </p>
           ))}
         </div>
@@ -121,6 +122,7 @@ function ExitoScreen({ formData, onVolver }) {
 // ── Formulario interno (usa useForm) ───────────────────────────
 function ActaFormInner({ onVolver, initialActa }) {
   const toast = useToast()
+  const isMobile = useMobile()
   const { formData, updateForm, resetForm, cargarDesdeActa } = useForm()
   const [seccion, setSeccion] = useState(1)
   /** Permite volver a pasos ya visitados sin saltar a pasos no alcanzados aún. */
@@ -320,7 +322,7 @@ function ActaFormInner({ onVolver, initialActa }) {
       const r = await guardarBorrador({ force: true })
       const actaId = r?.actaId
       if (!actaId) {
-        toast.error('No hay borrador de acta guardado todavía. Completá cliente, vehículo e ingreso y esperá «Guardado».')
+        toast.error('No hay borrador de acta guardado todavía. Completa cliente, vehículo e ingreso y espera «Guardado».')
         return
       }
       const cot = await cotizacionService.crearInicialDesdeActa(actaId)
@@ -561,7 +563,7 @@ function ActaFormInner({ onVolver, initialActa }) {
   }
 
   return (
-    <div style={{ minHeight: '100svh', background: '#F5F5F5' }}>
+    <div style={{ minHeight: '100svh', background: 'var(--card)' }}>
       <style>{`
         .acta-stage {
           width: 100%;
@@ -580,14 +582,14 @@ function ActaFormInner({ onVolver, initialActa }) {
       `}</style>
       {/* Header */}
       <div style={{
-        background: '#FFFFFF', borderBottom: '1px solid #E0E0E0',
-        padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
+        background: 'var(--background)', borderBottom: '1px solid var(--border)',
+        padding: isMobile ? '10px 12px' : '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
         position: 'sticky', top: 0, zIndex: 40,
       }}>
         <button
           type="button"
           onClick={onVolver}
-          style={{ background: '#F5F5F5', border: '1px solid #E0E0E0', color: '#111114', borderRadius: 8, width: 36, height: 36, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--foreground)', borderRadius: 8, width: 36, height: 36, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >←</button>
         <img src="/logo-secco.png" alt="SECCO"
           style={{ height: 28, objectFit: 'contain' }}
@@ -595,7 +597,7 @@ function ActaFormInner({ onVolver, initialActa }) {
         />
         <div style={{ flex: 1 }} />
         {(formData.numero_acta || formData.patente) && (
-          <span style={{ background: 'rgba(169,130,37,0.10)', color: '#a98225', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8, fontFamily: 'monospace', border: '1px solid rgba(169,130,37,0.25)' }}>
+          <span style={{ background: 'var(--secco-gold-10)', color: 'var(--secco-gold)', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8, fontFamily: 'monospace', border: '1px solid var(--secco-gold-30)' }}>
             {formData.numero_acta ? `#${formData.numero_acta}` : formData.patente}
           </span>
         )}
@@ -603,7 +605,7 @@ function ActaFormInner({ onVolver, initialActa }) {
           marginLeft: 10,
           fontSize: 12,
           fontWeight: 700,
-          color: saveState.state === 'error' ? '#FF453A' : saveState.state === 'saving' ? '#6B6B6B' : '#1a7a34',
+          color: saveState.state === 'error' ? 'var(--destructive)' : saveState.state === 'saving' ? 'var(--muted-foreground)' : 'var(--secco-green-dark)',
           opacity: saveState.state === 'idle' ? 0.0 : 1,
           transition: 'opacity 200ms ease',
           whiteSpace: 'nowrap',
@@ -646,12 +648,12 @@ function ActaFormInner({ onVolver, initialActa }) {
       {error && (
         <div style={{
           position: 'fixed', bottom: 16, left: 16, right: 16, zIndex: 50,
-          background: '#FF453A', color: '#FFFFFF', borderRadius: 14, padding: '14px 16px',
+          background: 'var(--destructive)', color: 'var(--background)', borderRadius: 14, padding: '14px 16px',
           display: 'flex', alignItems: 'flex-start', gap: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
         }}>
           <span style={{ flexShrink: 0 }}>⚠️</span>
           <p style={{ margin: 0, fontSize: 14, flex: 1 }}>{error}</p>
-          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: '#FFFFFF', fontSize: 20, cursor: 'pointer', lineHeight: 1, padding: 0 }}>×</button>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: 'var(--background)', fontSize: 20, cursor: 'pointer', lineHeight: 1, padding: 0 }}>×</button>
         </div>
       )}
     </div>

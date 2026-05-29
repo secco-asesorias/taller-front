@@ -20,8 +20,8 @@ export default function Section7_RecepcionSECCO({ onNext, onBack, variant = 'ing
   return (
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
-        <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>SECCO</p>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
+        <p style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>SECCO</p>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>
           {variant === 'entrega' ? 'Entrega SECCO' : 'Recepción SECCO'}
         </h2>
         <div className="s-divider" />
@@ -29,7 +29,7 @@ export default function Section7_RecepcionSECCO({ onNext, onBack, variant = 'ing
 
       <div className="s-card" style={{ marginBottom: 16 }}>
         <div style={{ marginBottom: 20 }}>
-          <label className="s-label">Nombre del responsable <span style={{ color: '#FF453A' }}>*</span></label>
+          <label className="s-label">Nombre del responsable <span style={{ color: 'var(--destructive)' }}>*</span></label>
           <input type="text" autoCapitalize="words"
             value={formData.nombre_responsable}
             onChange={(e) => updateForm({ nombre_responsable: e.target.value })}
@@ -40,7 +40,7 @@ export default function Section7_RecepcionSECCO({ onNext, onBack, variant = 'ing
         </div>
 
         <div style={{ marginBottom: 20 }}>
-          <label className="s-label">Cargo <span style={{ color: '#FF453A' }}>*</span></label>
+          <label className="s-label">Cargo <span style={{ color: 'var(--destructive)' }}>*</span></label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {CARGOS.map((c) => {
               const active = formData.cargo_responsable === c
@@ -49,8 +49,8 @@ export default function Section7_RecepcionSECCO({ onNext, onBack, variant = 'ing
                   style={{
                     padding: '13px 8px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', transition: 'all 150ms',
                     border: active ? '1.5px solid #a98225' : '1.5px solid #E0E0E0',
-                    background: active ? 'rgba(169,130,37,0.10)' : '#FFFFFF',
-                    color: active ? '#a98225' : '#6B6B6B',
+                    background: active ? 'var(--secco-gold-10)' : 'var(--background)',
+                    color: active ? 'var(--secco-gold)' : 'var(--muted-foreground)',
                   }}
                 >{c}</button>
               )

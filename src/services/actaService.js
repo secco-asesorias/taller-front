@@ -23,4 +23,7 @@ export const actaService = {
 
   subirFoto: (actaId, tipo, base64, mimetype = 'image/jpeg', ext = 'jpg') =>
     api.post('/api/fotos/acta', { actaId, tipo, base64, mimetype, ext }),
+
+  /** Crea (o devuelve) la OT asociada al acta */
+  iniciarOT: (actaId) => api.post(`/api/actas/${actaId}/iniciar-ot`),
 };

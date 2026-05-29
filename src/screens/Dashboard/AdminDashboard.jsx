@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { unwrapApiList } from '../../lib/unwrapApiList'
 import { useRol } from '../../context/AuthContext'
+import { useMobile } from '../../hooks/useMobile'
 import { actaService } from '../../services/actaService'
 import { diagnosticoService } from '../../services/diagnosticoService'
 import { cotizacionService } from '../../services/cotizacionService'
@@ -13,10 +14,10 @@ const STATUS_LABEL = {
   cerrada: 'Cerrada',
 }
 
-function statusStyle(status) {
-  if (status === 'cerrada') return { background: 'rgba(52,199,89,0.12)', color: '#1a7a34', border: '1px solid rgba(52,199,89,0.3)' }
-  if (status === 'borrador') return { background: 'rgba(107,107,107,0.10)', color: '#6B6B6B', border: '1px solid #E0E0E0' }
-  return { background: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' }
+function statusClass(status) {
+  if (status === 'cerrada')  return 'status-badge-cerrada'
+  if (status === 'borrador') return 'status-badge-borrador'
+  return 'status-badge-activa'
 }
 
 function contarPorStatus(list = [], campo = 'status') {
@@ -30,6 +31,7 @@ function contarPorStatus(list = [], campo = 'status') {
 
 export default function AdminDashboard({ onNavigate }) {
   const { nombre, rolEtiqueta } = useRol()
+  const isMobile = useMobile()
   const [actas, setActas] = useState([])
   const actasRecientesRef = useRef([])
   const [loading, setLoading] = useState(true)
@@ -118,14 +120,14 @@ export default function AdminDashboard({ onNavigate }) {
   }, [patenteDebounced, loading])
 
   return (
-    <div style={{ padding: '12px 4px 28px' }}>
+    <div style={{ padding: isMobile ? '8px 4px 28px' : '12px 4px 28px' }}>
       <div style={{ marginBottom: 12 }}>
-        <p style={{ color: '#6B6B6B', fontSize: 13, margin: '0 0 2px' }}>Bienvenido,</p>
-        <h2 style={{ color: '#111114', fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: '-0.3px' }}>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: '0 0 2px' }}>Bienvenido,</p>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: '-0.3px' }}>
           {nombre}
         </h2>
         {rolEtiqueta ? (
-          <p style={{ margin: '6px 0 0', color: '#6B6B6B', fontSize: 12 }}>{rolEtiqueta}</p>
+          <p style={{ margin: '6px 0 0', color: 'var(--muted-foreground)', fontSize: 12 }}>{rolEtiqueta}</p>
         ) : null}
       </div>
 
@@ -133,8 +135,8 @@ export default function AdminDashboard({ onNavigate }) {
       <div className="s-card" style={{ padding: 14, marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, color: '#111114', fontSize: 16, fontWeight: 800 }}>Resumen</p>
-            <p style={{ margin: '2px 0 0', color: '#6B6B6B', fontSize: 12 }}>Estado general del taller</p>
+            <p style={{ margin: 0, color: 'var(--foreground)', fontSize: 16, fontWeight: 800 }}>Resumen</p>
+            <p style={{ margin: '2px 0 0', color: 'var(--muted-foreground)', fontSize: 12 }}>Estado general del taller</p>
           </div>
         </div>
 
@@ -144,28 +146,28 @@ export default function AdminDashboard({ onNavigate }) {
               title: 'Actas',
               subtitle: `${resumen.actas.porStatus.borrador || 0} borrador`,
               value: resumen.actas.total,
-              color: '#1e3a8a',
+              color: 'var(--secco-gold)',
               onClick: () => onNavigate?.('actas'),
             },
             {
               title: 'Diagnósticos',
               subtitle: `${resumen.diagnosticos.porStatus.pendiente || 0} pendientes`,
               value: resumen.diagnosticos.total,
-              color: '#a98225',
+              color: 'var(--secco-gold)',
               onClick: () => onNavigate?.('diagnosticos'),
             },
             {
               title: 'Cotizaciones',
               subtitle: `${resumen.cotizaciones.porStatus.borrador || 0} borrador`,
               value: resumen.cotizaciones.total,
-              color: '#5856D6',
+              color: 'var(--secco-purple)',
               onClick: () => onNavigate?.('cotizaciones'),
             },
             {
               title: 'Órdenes de Trabajo',
               subtitle: `${resumen.ots.porStatus.en_proceso || 0} en proceso`,
               value: resumen.ots.total,
-              color: '#1a7a34',
+              color: 'var(--secco-green-dark)',
               onClick: () => onNavigate?.('ordenes-trabajo'),
             },
           ].map((kpi) => (
@@ -183,19 +185,19 @@ export default function AdminDashboard({ onNavigate }) {
               style={{
                 padding: 12,
                 borderRadius: 14,
-                background: '#FFFFFF',
-                border: '1.5px solid #E0E0E0',
+                background: 'var(--background)',
+                border: '1.5px solid var(--border)',
                 cursor: 'pointer',
                 minWidth: 0,
               }}
             >
-              <p style={{ margin: 0, fontSize: 11, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase', color: '#6B6B6B' }}>
+              <p style={{ margin: 0, fontSize: 11, fontWeight: 900, letterSpacing: '0.7px', textTransform: 'uppercase', color: 'var(--muted-foreground)' }}>
                 {kpi.title}
               </p>
               <p style={{ margin: '6px 0 2px', fontSize: 22, fontWeight: 900, color: kpi.color }}>
                 {loading ? '—' : kpi.value}
               </p>
-              <p style={{ margin: 0, fontSize: 12, color: '#6B6B6B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--muted-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {loading ? 'Cargando…' : kpi.subtitle}
               </p>
             </div>
@@ -215,8 +217,8 @@ export default function AdminDashboard({ onNavigate }) {
       <div className="s-card" style={{ padding: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
           <div style={{ minWidth: 0 }}>
-            <p style={{ margin: 0, color: '#111114', fontSize: 16, fontWeight: 800 }}>Historial de actas</p>
-            <p style={{ margin: '2px 0 0', color: '#6B6B6B', fontSize: 12 }}>
+            <p style={{ margin: 0, color: 'var(--foreground)', fontSize: 16, fontWeight: 800 }}>Historial de actas</p>
+            <p style={{ margin: '2px 0 0', color: 'var(--muted-foreground)', fontSize: 12 }}>
               {patenteDebounced ? 'Resultados por patente' : 'Últimas recepciones'}
             </p>
           </div>
@@ -247,11 +249,11 @@ export default function AdminDashboard({ onNavigate }) {
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '26px 0' }}>
-            <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0 }}>Cargando actas...</p>
+            <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: 0 }}>Cargando actas...</p>
           </div>
         ) : buscandoPatente ? (
           <div style={{ textAlign: 'center', padding: '26px 0' }}>
-            <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0 }}>Buscando por patente…</p>
+            <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: 0 }}>Buscando por patente…</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -271,36 +273,32 @@ export default function AdminDashboard({ onNavigate }) {
                   padding: 12,
                   textAlign: 'left',
                   cursor: 'pointer',
-                  border: '1.5px solid #E0E0E0',
+                  border: '1.5px solid var(--border)',
                   borderRadius: 14,
-                  background: '#FFFFFF',
+                  background: 'var(--background)',
                   fontFamily: 'inherit',
                   width: '100%',
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                   <div style={{ minWidth: 0 }}>
-                    <p style={{ margin: '0 0 2px', color: '#1e3a8a', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <p style={{ margin: '0 0 2px', color: 'var(--secco-gold)', fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       #{acta.numero_acta}
                       {acta.vehiculos?.patente ? (
                         <> — <PatenteLink patente={acta.vehiculos.patente} mono stopPropagation /></>
                       ) : null}
                     </p>
-                    <p style={{ margin: '0 0 2px', color: '#111114', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <p style={{ margin: '0 0 2px', color: 'var(--foreground)', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {acta.clientes?.nombre}
                     </p>
-                    <p style={{ margin: 0, color: '#6B6B6B', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 11, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {acta.vehiculos?.marca} {acta.vehiculos?.modelo}
                     </p>
                   </div>
-                  <span style={{
-                    fontSize: 11,
-                    fontWeight: 800,
-                    padding: '4px 10px',
-                    borderRadius: 20,
-                    flexShrink: 0,
-                    ...statusStyle(acta.status),
-                  }}>
+                  <span
+                    className={statusClass(acta.status)}
+                    style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 20, flexShrink: 0 }}
+                  >
                     {STATUS_LABEL[acta.status] || acta.status}
                   </span>
                 </div>
@@ -308,7 +306,7 @@ export default function AdminDashboard({ onNavigate }) {
                 {(acta.fecha_ingreso || acta.status === 'borrador') ? (
                   <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                     {acta.fecha_ingreso ? (
-                      <p style={{ margin: 0, color: '#6B6B6B', fontSize: 11 }}>
+                      <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 11 }}>
                         {new Date(acta.fecha_ingreso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </p>
                     ) : (
@@ -334,7 +332,7 @@ export default function AdminDashboard({ onNavigate }) {
 
             {!actas.length && (
               <div style={{ textAlign: 'center', padding: '26px 0' }}>
-                <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0 }}>
+                <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: 0 }}>
                   {patenteDebounced ? 'No hay actas con esa patente' : 'Aún no hay actas'}
                 </p>
               </div>
