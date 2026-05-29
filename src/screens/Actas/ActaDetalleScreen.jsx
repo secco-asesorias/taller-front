@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react'
 import { actaService } from '../../services/actaService'
-import { diagnosticoService } from '../../services/diagnosticoService'
-import { useRol } from '../../context/AuthContext'
 import { generarPDFDesdeActaGuardada } from '../../utils/pdf'
 import { useToast } from '../../components/common/ToastProvider'
 import { useConfirm } from '../../components/common/ConfirmProvider'
@@ -308,9 +306,9 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
               className="s-btn-secondary"
               onClick={() => onNavigate?.(`diagnosticos/${acta.diagnostico_id}`)}
             >
-              {creandoDiag ? 'Iniciando…' : 'Iniciar diagnóstico'}
+              Ver diagnóstico →
             </button>
-          ) : null}
+          )}
           <button type="button" className="s-btn-secondary" onClick={onVolver}>
             Volver a actas
           </button>
