@@ -181,4 +181,4 @@ export function useRol() {
     puedeGestionarUsuarios: rol === 'admin',
   }
 }
-
+

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AuthProvider, useAuth, useRol } from './context/AuthContext'
-import { DiagnosticoProvider } from './context/DiagnosticoContext'
 import AppShell from './components/layout/AppShell'
 import { ToastProvider } from './components/common/ToastProvider'
 import { ConfirmProvider } from './components/common/ConfirmProvider'
@@ -15,12 +14,14 @@ import ActaForm from './screens/Actas/ActaForm'
 import ActaDetalleScreen from './screens/Actas/ActaDetalleScreen'
 import { actaService } from './services/actaService'
 import DiagnosticosListScreen from './screens/Diagnostico/DiagnosticosListScreen'
-import DiagnosticoForm from './screens/Diagnostico/DiagnosticoForm'
+import DiagnosticoDetalleScreen from './screens/Diagnostico/DiagnosticoDetalleScreen'
+import DiagnosticoScreen from './screens/Diagnostico/DiagnosticoScreen'
 import CotizacionesListScreen from './screens/Cotizaciones/CotizacionesListScreen'
 import PresupuestoForm, { nuevaCotizacionPlantilla } from './screens/Cotizaciones/PresupuestoForm'
 import OTListScreen from './screens/OrdenesTrabajo/OTListScreen'
 import OTForm from './screens/OrdenesTrabajo/OTForm'
 import ClientesListScreen from './screens/Clientes/ClientesListScreen'
+import VehiculosListScreen from './screens/Vehiculos/VehiculosListScreen'
 import UsuariosListScreen from './screens/Usuarios/UsuariosListScreen'
 import ActasEntregaListScreen from './screens/ActasEntrega/ActasEntregaListScreen'
 import ActaEntregaForm from './screens/ActasEntrega/ActaEntregaForm'
@@ -107,24 +108,25 @@ function ActaEditarRoute() {
 function DiagnosticoDetalleRoute() {
   const { diagId } = useParams()
   const navigate = useNavigate()
-  const [diagnosticoActivo, setDiagnosticoActivo] = useState(null)
-
-  useEffect(() => {
-    // Mantiene el comportamiento previo: si no está cargado el objeto, cargar desde servicio.
-    import('./services/diagnosticoService').then(({ diagnosticoService }) => {
-      diagnosticoService.obtener(diagId).then(setDiagnosticoActivo).catch(() => setDiagnosticoActivo(null))
-    })
-  }, [diagId])
-
-  if (!diagnosticoActivo) {
-    const onNavigate = useLegacyNavigate()
-    return <DiagnosticosListScreen onNavigate={onNavigate} />
-  }
-
+  const onNavigate = useLegacyNavigate()
   return (
-    <DiagnosticoProvider>
-      <DiagnosticoForm diagnosticoInicial={diagnosticoActivo} onVolver={() => navigate('/diagnosticos')} />
-    </DiagnosticoProvider>
+    <DiagnosticoDetalleScreen
+      diagId={diagId}
+      onVolver={() => navigate('/diagnosticos')}
+      onEditar={(id) => navigate(`/diagnosticos/${id}/editar`)}
+      onNavigate={onNavigate}
+    />
+  )
+}
+
+function DiagnosticoEditarRoute() {
+  const { diagId } = useParams()
+  const navigate = useNavigate()
+  return (
+    <DiagnosticoScreen
+      diagnosticoId={diagId}
+      onVolver={() => navigate(`/diagnosticos/${diagId}`)}
+    />
   )
 }
 
@@ -252,6 +254,15 @@ function ClientesListRoute() {
   return <ClientesListScreen onNavigate={onNavigate} />
 }
 
+function VehiculosListRoute() {
+  return <VehiculosListScreen />
+}
+
+function VehiculoDetalleRoute() {
+  const { patente } = useParams()
+  return <VehiculosListScreen patenteInicial={patente} />
+}
+
 function ActasEntregaListRoute() {
   const onNavigate = useLegacyNavigate()
   return <ActasEntregaListScreen onNavigate={onNavigate} />
@@ -327,6 +338,7 @@ function AppRoutes() {
         <Route path="actas-entrega/:actaEntregaId/editar" element={<ActaEntregaEditarRoute />} />
 
         <Route path="diagnosticos" element={<DiagnosticosListRoute />} />
+        <Route path="diagnosticos/:diagId/editar" element={<DiagnosticoEditarRoute />} />
         <Route path="diagnosticos/:diagId" element={<DiagnosticoDetalleRoute />} />
 
         <Route path="cotizaciones" element={<CotizacionesListRoute />} />
@@ -337,6 +349,8 @@ function AppRoutes() {
         <Route path="ordenes-trabajo/:otId" element={<OTDetalleRoute />} />
 
         <Route path="clientes" element={<ClientesListRoute />} />
+        <Route path="vehiculos" element={<VehiculosListRoute />} />
+        <Route path="vehiculos/:patente" element={<VehiculoDetalleRoute />} />
         <Route path="usuarios" element={<UsuariosListScreen />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />

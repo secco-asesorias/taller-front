@@ -661,24 +661,21 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   const resizeTotalesDrag = useRef({ active: false, startY: 0, startH: 0 })
   const saveTimer = useRef(null)
 
-  const [clienteManual, setClienteManual] = useState(() => ({
-    ...EMPTY_CLIENTE_MANUAL,
-    ...(cotizacionInicial.vista_cliente?.cliente_manual || {}),
-  }))
-  const [vehiculoManual, setVehiculoManual] = useState(() => ({
-    ...EMPTY_VEHICULO_MANUAL,
-    ...(cotizacionInicial.vista_cliente?.vehiculo_manual || {}),
-  }))
+  const [clienteManual, setClienteManual] = useState(() => mergeClienteManual(cotizacionInicial))
+  const [vehiculoManual, setVehiculoManual] = useState(() => mergeVehiculoManual(cotizacionInicial))
   const clienteManualRef = useRef(clienteManual)
   const vehiculoManualRef = useRef(vehiculoManual)
   useEffect(() => { clienteManualRef.current = clienteManual }, [clienteManual])
   useEffect(() => { vehiculoManualRef.current = vehiculoManual }, [vehiculoManual])
 
   useEffect(() => {
-    const vc = cotizacion.vista_cliente || {}
-    setClienteManual({ ...EMPTY_CLIENTE_MANUAL, ...(vc.cliente_manual || {}) })
-    setVehiculoManual({ ...EMPTY_VEHICULO_MANUAL, ...(vc.vehiculo_manual || {}) })
-  }, [cotizacion.id])
+    const nextCliente = mergeClienteManual(cotizacion)
+    const nextVeh = mergeVehiculoManual(cotizacion)
+    setClienteManual(nextCliente)
+    setVehiculoManual(nextVeh)
+    clienteManualRef.current = nextCliente
+    vehiculoManualRef.current = nextVeh
+  }, [cotizacion.id, cotizacion.acta_id])
 
   useEffect(() => {
     cotizacionIdRef.current = cotizacion?.id || null

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { ordenTrabajoService } from '../../services/ordenTrabajoService'
 import { useRol, listarTecnicos } from '../../context/AuthContext'
 import { useMobile } from '../../hooks/useMobile'
@@ -104,6 +104,15 @@ function SectionTitle({ title, hint }) {
       {hint && <p style={{ margin: 0, fontSize: 12, color: 'var(--muted-foreground)' }}>{hint}</p>}
     </div>
   )
+}
+
+/** Incluye el técnico ya asignado en el select aunque no venga en GET /api/usuarios. */
+function opcionesTecnicos(tecnicos, ot) {
+  const id = ot?.tecnico_id
+  const nombre = ot?.tecnico_nombre || ot?.tecnico_asignado
+  if (!id) return tecnicos
+  if (tecnicos.some((t) => t.id === id)) return tecnicos
+  return [{ id, nombre: nombre || 'Técnico asignado' }, ...tecnicos]
 }
 
 function VehiclePanel({ ot }) {
@@ -527,6 +536,14 @@ export default function OTForm({ otInicial, onVolver }) {
     const interval = setInterval(recargar, 10000)
     return () => clearInterval(interval)
   }, [recargar])
+
+  useEffect(() => {
+    if (ot.tecnico_id) setTecnicoId(ot.tecnico_id)
+    const nombre = ot.tecnico_nombre || ot.tecnico_asignado
+    if (nombre) setTecnico(nombre)
+  }, [ot.tecnico_id, ot.tecnico_nombre, ot.tecnico_asignado])
+
+  const tecnicosOpciones = useMemo(() => opcionesTecnicos(tecnicos, ot), [tecnicos, ot])
 
   const scheduleGuardar = useCallback((payload) => {
     setSaveStatus('unsaved')
