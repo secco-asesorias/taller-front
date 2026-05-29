@@ -51,13 +51,13 @@ export default function Section1_Cliente({ onNext, variant = 'ingreso' }) {
         <div className="s-card s1-card">
           {/* Header de sección */}
           <div style={{ marginBottom: 18 }}>
-            <p style={{ color: '#a98225', fontSize: 12, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 6px' }}>
+            <p style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', margin: '0 0 6px' }}>
               Torre de Control
             </p>
-            <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 800, letterSpacing: '-0.3px', margin: 0 }}>
+            <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 800, letterSpacing: '-0.3px', margin: 0 }}>
               Datos del cliente
             </h2>
-            <p style={{ margin: '6px 0 0', color: '#6B6B6B', fontSize: 13, lineHeight: 1.35 }}>
+            <p style={{ margin: '6px 0 0', color: 'var(--muted-foreground)', fontSize: 13, lineHeight: 1.35 }}>
               Completa la información para continuar con la recepción.
             </p>
             <div className="s-divider" style={{ marginBottom: 0 }} />
@@ -66,7 +66,7 @@ export default function Section1_Cliente({ onNext, variant = 'ingreso' }) {
           <div className="s1-grid">
             {/* Nombre */}
             <div style={{ gridColumn: '1 / -1' }}>
-              <label className="s-label">Nombre completo <span style={{ color: '#FF453A' }}>*</span></label>
+              <label className="s-label">Nombre completo <span style={{ color: 'var(--destructive)' }}>*</span></label>
               <input
                 type="text"
                 inputMode="text"
@@ -82,7 +82,7 @@ export default function Section1_Cliente({ onNext, variant = 'ingreso' }) {
 
             {/* RUT */}
             <div>
-              <label className="s-label">RUT <span style={{ color: '#FF453A' }}>*</span></label>
+              <label className="s-label">RUT <span style={{ color: 'var(--destructive)' }}>*</span></label>
               <input
                 type="text"
                 inputMode="numeric"
@@ -99,7 +99,7 @@ export default function Section1_Cliente({ onNext, variant = 'ingreso' }) {
 
             {/* Teléfono */}
             <div>
-              <label className="s-label">Teléfono <span style={{ color: '#FF453A' }}>*</span></label>
+              <label className="s-label">Teléfono <span style={{ color: 'var(--destructive)' }}>*</span></label>
               <input
                 type="tel"
                 inputMode="tel"
@@ -114,7 +114,7 @@ export default function Section1_Cliente({ onNext, variant = 'ingreso' }) {
 
             {/* Email */}
             <div style={{ gridColumn: '1 / -1' }}>
-              <label className="s-label">Correo electrónico <span style={{ color: '#FF453A' }}>*</span></label>
+              <label className="s-label">Correo electrónico <span style={{ color: 'var(--destructive)' }}>*</span></label>
               <input
                 type="email"
                 inputMode="email"

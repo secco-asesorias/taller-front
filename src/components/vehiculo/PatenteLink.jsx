@@ -7,7 +7,7 @@ const LINK_STYLE = {
   padding: 0,
   margin: 0,
   font: 'inherit',
-  color: '#1e3a8a',
+  color: 'var(--secco-gold)',
   textDecoration: 'underline',
   textUnderlineOffset: 2,
   cursor: 'pointer',

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-
+import { useMobile } from '../../hooks/useMobile'
 import { FormEntregaProvider, mergeActaEntregaIntoInitialForm, useFormEntrega } from '../../context/FormEntregaContext'
 
 import ProgressBar from '../../components/common/ProgressBar'
@@ -72,21 +72,21 @@ function ExitoScreen({ formData, onVolver }) {
 
   return (
 
-    <div className="fade-in" style={{ minHeight: '100svh', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+    <div className="fade-in" style={{ minHeight: '100svh', background: 'var(--background)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
 
-      <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(52,199,89,0.12)', border: '2px solid #1a7a34', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, marginBottom: 24, color: '#1a7a34' }}>
+      <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--secco-green-12)', border: '2px solid #1a7a34', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, marginBottom: 24, color: 'var(--secco-green-dark)' }}>
 
         ✓
 
       </div>
 
-      <h2 style={{ color: '#111114', fontSize: 22, fontWeight: 600, textAlign: 'center', margin: '0 0 8px' }}>
+      <h2 style={{ color: 'var(--foreground)', fontSize: 22, fontWeight: 600, textAlign: 'center', margin: '0 0 8px' }}>
 
         Acta de entrega completada
 
       </h2>
 
-      <p style={{ color: '#6B6B6B', fontSize: 14, textAlign: 'center', margin: '0 0 32px' }}>
+      <p style={{ color: 'var(--muted-foreground)', fontSize: 14, textAlign: 'center', margin: '0 0 32px' }}>
 
         El vehículo quedó registrado como entregado al cliente.
 
@@ -94,13 +94,13 @@ function ExitoScreen({ formData, onVolver }) {
 
       <div className="s-card" style={{ width: '100%', maxWidth: 380, marginBottom: 28 }}>
 
-        <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 16, color: '#111114' }}>
+        <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 16, color: 'var(--foreground)' }}>
 
           {formData.marca} {formData.modelo}
 
         </p>
 
-        <p style={{ margin: 0, fontSize: 13, color: '#6B6B6B' }}>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--muted-foreground)' }}>
 
           {formData.patente} · {formData.anio}
 
@@ -108,7 +108,7 @@ function ExitoScreen({ formData, onVolver }) {
 
         {formData.numero_acta_entrega ? (
 
-          <p style={{ margin: '12px 0 0', fontSize: 13, color: '#1a7a34', fontWeight: 700 }}>
+          <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--secco-green-dark)', fontWeight: 700 }}>
 
             Entrega #{formData.numero_acta_entrega}
 
@@ -135,6 +135,7 @@ function ExitoScreen({ formData, onVolver }) {
 function ActaEntregaFormInner({ onVolver, initialActa }) {
 
   const toast = useToast()
+  const isMobile = useMobile()
 
   const { formData, updateForm, resetForm, cargarDesdeActa } = useFormEntrega()
 
@@ -542,25 +543,25 @@ function ActaEntregaFormInner({ onVolver, initialActa }) {
 
   return (
 
-    <div style={{ minHeight: '100svh', background: '#F5F5F5' }}>
+    <div style={{ minHeight: '100svh', background: 'var(--card)' }}>
 
       <div style={{
 
-        background: '#FFFFFF', borderBottom: '1px solid #E0E0E0',
+        background: 'var(--background)', borderBottom: '1px solid var(--border)',
 
-        padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
+        padding: isMobile ? '10px 12px' : '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
 
         position: 'sticky', top: 0, zIndex: 40,
 
       }}>
 
-        <button type="button" onClick={onVolver} style={{ background: '#F5F5F5', border: '1px solid #E0E0E0', color: '#111114', borderRadius: 8, width: 36, height: 36, fontSize: 18, cursor: 'pointer' }}>←</button>
+        <button type="button" onClick={onVolver} style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--foreground)', borderRadius: 8, width: 36, height: 36, fontSize: 18, cursor: 'pointer' }}>←</button>
 
         <img src="/logo-secco.png" alt="SECCO" style={{ height: 28, objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none' }} />
 
         <div style={{ flex: 1 }} />
 
-        <span style={{ background: 'rgba(26,122,52,0.10)', color: '#1a7a34', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(26,122,52,0.25)' }}>
+        <span style={{ background: 'rgba(26,122,52,0.10)', color: 'var(--secco-green-dark)', fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 8, border: '1px solid rgba(26,122,52,0.25)' }}>
 
           Entrega
 
@@ -568,7 +569,7 @@ function ActaEntregaFormInner({ onVolver, initialActa }) {
 
         {(formData.numero_acta_entrega || formData.patente) && (
 
-          <span style={{ background: 'rgba(169,130,37,0.10)', color: '#a98225', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8, fontFamily: 'monospace', border: '1px solid rgba(169,130,37,0.25)' }}>
+          <span style={{ background: 'var(--secco-gold-10)', color: 'var(--secco-gold)', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8, fontFamily: 'monospace', border: '1px solid var(--secco-gold-30)' }}>
 
             {formData.numero_acta_entrega ? `#${formData.numero_acta_entrega}` : formData.patente}
 
@@ -576,7 +577,7 @@ function ActaEntregaFormInner({ onVolver, initialActa }) {
 
         )}
 
-        <span style={{ fontSize: 12, fontWeight: 700, color: saveState.state === 'error' ? '#FF453A' : '#1a7a34', marginLeft: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: saveState.state === 'error' ? 'var(--destructive)' : 'var(--secco-green-dark)', marginLeft: 8 }}>
 
           {saveState.message}
 
@@ -628,7 +629,7 @@ function ActaEntregaFormInner({ onVolver, initialActa }) {
 
       {error && (
 
-        <div style={{ position: 'fixed', bottom: 16, left: 16, right: 16, zIndex: 50, background: '#FF453A', color: '#FFF', borderRadius: 14, padding: '14px 16px' }}>
+        <div style={{ position: 'fixed', bottom: 16, left: 16, right: 16, zIndex: 50, background: 'var(--destructive)', color: '#FFF', borderRadius: 14, padding: '14px 16px' }}>
 
           <p style={{ margin: 0, fontSize: 14 }}>{error}</p>
 

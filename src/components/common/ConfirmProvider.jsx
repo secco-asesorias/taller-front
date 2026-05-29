@@ -47,15 +47,15 @@ export function ConfirmProvider({ children }) {
           <div style={{ position: 'fixed', inset: 0, zIndex: 91, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
             <div style={{
               width: 'min(520px, 100%)',
-              background: '#FFFFFF',
+              background: 'var(--background)',
               borderRadius: 16,
               border: '1.5px solid #E0E0E0',
               boxShadow: '0 18px 50px rgba(0,0,0,0.20)',
               padding: 16,
             }}>
-              <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#111114' }}>{state.title}</p>
+              <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--foreground)' }}>{state.title}</p>
               {state.message && (
-                <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.45, color: '#6B6B6B' }}>
+                <p style={{ margin: '8px 0 0', fontSize: 13, lineHeight: 1.45, color: 'var(--muted-foreground)' }}>
                   {state.message}
                 </p>
               )}
@@ -75,7 +75,7 @@ export function ConfirmProvider({ children }) {
                   className="s-btn-primary"
                   style={{
                     height: 44,
-                    background: state.danger ? '#FF453A' : undefined,
+                    background: state.danger ? 'var(--destructive)' : undefined,
                   }}
                 >
                   {state.confirmText}

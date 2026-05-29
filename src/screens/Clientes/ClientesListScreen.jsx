@@ -4,10 +4,12 @@ import { useToast } from '../../components/common/ToastProvider'
 import { vehiculoService } from '../../services/vehiculoService'
 import { useConfirm } from '../../components/common/ConfirmProvider'
 import PatenteLink from '../../components/vehiculo/PatenteLink'
+import { useMobile } from '../../hooks/useMobile'
 
 export default function ClientesListScreen({ onNavigate }) {
   const toast = useToast()
   const { confirm } = useConfirm()
+  const isMobile = useMobile()
   const [clientes, setClientes] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
@@ -229,7 +231,7 @@ export default function ClientesListScreen({ onNavigate }) {
   }
 
   return (
-    <div style={{ padding: '14px 12px 40px' }}>
+    <div style={{ padding: isMobile ? '10px 8px 40px' : '14px 12px 40px' }}>
       <style>{`
         .cli-toolbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
         .cli-list { display: grid; grid-template-columns: 1fr; gap: 10px; }
@@ -238,8 +240,8 @@ export default function ClientesListScreen({ onNavigate }) {
 
       <div className="cli-toolbar">
         <div style={{ minWidth: 0 }}>
-          <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 800, margin: 0 }}>Clientes</h2>
-          <p style={{ margin: '4px 0 0', color: '#6B6B6B', fontSize: 12 }}>
+          <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 800, margin: 0 }}>Clientes</h2>
+          <p style={{ margin: '4px 0 0', color: 'var(--muted-foreground)', fontSize: 12 }}>
             {loading ? 'Cargando...' : `${filtrados.length} resultado${filtrados.length === 1 ? '' : 's'}`}
           </p>
         </div>
@@ -261,7 +263,7 @@ export default function ClientesListScreen({ onNavigate }) {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px 0' }}>
-          <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando clientes...</p>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Cargando clientes...</p>
         </div>
       ) : (
         <div className="cli-list">
@@ -270,30 +272,30 @@ export default function ClientesListScreen({ onNavigate }) {
               key={cliente.id}
               style={{
                 padding: 16,
-                border: '1.5px solid #E0E0E0',
+                border: '1.5px solid var(--border)',
                 borderRadius: 14,
-                background: '#FFFFFF',
+                background: 'var(--background)',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ margin: '0 0 4px', color: '#111114', fontSize: 15, fontWeight: 700 }}>
+                  <p style={{ margin: '0 0 4px', color: 'var(--foreground)', fontSize: 15, fontWeight: 700 }}>
                     {cliente.nombre}
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {cliente.rut && (
-                      <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>
-                        RUT: <span style={{ color: '#111114', fontFamily: 'monospace' }}>{cliente.rut}</span>
+                      <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 12 }}>
+                        RUT: <span style={{ color: 'var(--foreground)', fontFamily: 'monospace' }}>{cliente.rut}</span>
                       </p>
                     )}
                     {cliente.telefono && (
-                      <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>
+                      <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 12 }}>
                         Tel: {cliente.telefono}
                       </p>
                     )}
                     {cliente.email && (
-                      <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {cliente.email}
                       </p>
                     )}
@@ -309,8 +311,8 @@ export default function ClientesListScreen({ onNavigate }) {
                       padding: '0 10px',
                       borderRadius: 10,
                       border: '1.5px solid rgba(0,0,0,0.10)',
-                      background: '#FFFFFF',
-                      color: '#111114',
+                      background: 'var(--background)',
+                      color: 'var(--foreground)',
                       fontSize: 12,
                       fontWeight: 800,
                       cursor: 'pointer',
@@ -326,9 +328,9 @@ export default function ClientesListScreen({ onNavigate }) {
                       height: 34,
                       padding: '0 10px',
                       borderRadius: 10,
-                      border: '1.5px solid rgba(169,130,37,0.30)',
-                      background: 'rgba(169,130,37,0.08)',
-                      color: '#6b4f10',
+                      border: '1.5px solid var(--secco-gold-30)',
+                      background: 'var(--secco-gold-10)',
+                      color: 'var(--secco-gold)',
                       fontSize: 12,
                       fontWeight: 800,
                       cursor: 'pointer',
@@ -344,9 +346,9 @@ export default function ClientesListScreen({ onNavigate }) {
                       height: 34,
                       padding: '0 10px',
                       borderRadius: 10,
-                      border: '1.5px solid rgba(30,58,138,0.25)',
-                      background: 'rgba(30,58,138,0.06)',
-                      color: '#1e3a8a',
+                      border: '1.5px solid var(--secco-gold-30)',
+                      background: 'var(--secco-gold-10)',
+                      color: 'var(--secco-gold)',
                       fontSize: 12,
                       fontWeight: 800,
                       cursor: 'pointer',
@@ -362,9 +364,9 @@ export default function ClientesListScreen({ onNavigate }) {
                       height: 34,
                       padding: '0 10px',
                       borderRadius: 10,
-                      border: '1.5px solid rgba(255,69,58,0.35)',
-                      background: 'rgba(255,69,58,0.08)',
-                      color: '#b42318',
+                      border: '1.5px solid var(--secco-red-35)',
+                      background: 'var(--secco-red-08)',
+                      color: 'var(--secco-red-dark)',
                       fontSize: 12,
                       fontWeight: 800,
                       cursor: 'pointer',
@@ -377,9 +379,9 @@ export default function ClientesListScreen({ onNavigate }) {
               </div>
 
               {vehiculosOpen[cliente.id] && (
-                <div style={{ marginTop: 12, background: '#F5F5F5', border: '1px solid #E0E0E0', borderRadius: 12, padding: 12 }}>
+                <div style={{ marginTop: 12, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
-                    <p style={{ margin: 0, color: '#6B6B6B', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                    <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                       Vehículos
                     </p>
                     <button
@@ -389,9 +391,9 @@ export default function ClientesListScreen({ onNavigate }) {
                         height: 30,
                         padding: '0 10px',
                         borderRadius: 10,
-                        border: '1.5px solid rgba(169,130,37,0.35)',
-                        background: '#FFFFFF',
-                        color: '#a98225',
+                        border: '1.5px solid var(--secco-gold-30)',
+                        background: 'var(--background)',
+                        color: 'var(--secco-gold)',
                         fontSize: 12,
                         fontWeight: 900,
                         cursor: 'pointer',
@@ -402,21 +404,21 @@ export default function ClientesListScreen({ onNavigate }) {
                     </button>
                   </div>
                   {vehiculosLoading[cliente.id] ? (
-                    <p style={{ margin: 0, color: '#6B6B6B', fontSize: 13 }}>Cargando…</p>
+                    <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 13 }}>Cargando…</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {(vehiculosByCliente[cliente.id] || []).map((v) => (
-                        <div key={v.id} style={{ background: '#FFFFFF', border: '1px solid #E0E0E0', borderRadius: 10, padding: '10px 12px' }}>
+                        <div key={v.id} style={{ background: 'var(--background)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
                             <div style={{ minWidth: 0 }}>
-                              <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: '#111114' }}>
+                              <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: 'var(--foreground)' }}>
                                 {v.patente ? (
-                                  <PatenteLink patente={v.patente} mono style={{ fontWeight: 800, color: '#111114', textDecoration: 'none' }} />
+                                  <PatenteLink patente={v.patente} mono style={{ fontWeight: 800, color: 'var(--foreground)', textDecoration: 'none' }} />
                                 ) : '—'}
                                 {v.marca ? ` · ${v.marca}` : ''} {v.modelo ? `${v.modelo}` : ''}
                               </p>
                               {(v.anio || v.vin || v.color) && (
-                                <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B6B6B' }}>
+                                <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted-foreground)' }}>
                                   {v.anio ? `Año ${v.anio}` : ''}
                                   {v.anio && (v.vin || v.color) ? ' · ' : ''}
                                   {v.color || ''}
@@ -429,21 +431,21 @@ export default function ClientesListScreen({ onNavigate }) {
                               <button
                                 type="button"
                                 onClick={() => openDetalleVehiculo(v)}
-                                style={{ height: 30, padding: '0 10px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.12)', background: '#FFFFFF', color: '#111114', fontSize: 12, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
+                                style={{ height: 30, padding: '0 10px', borderRadius: 10, border: '1px solid rgba(0,0,0,0.12)', background: 'var(--background)', color: 'var(--foreground)', fontSize: 12, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
                               >
                                 Detalle
                               </button>
                               <button
                                 type="button"
                                 onClick={() => openEditarVehiculo(cliente, v)}
-                                style={{ height: 30, padding: '0 10px', borderRadius: 10, border: '1px solid rgba(30,58,138,0.22)', background: 'rgba(30,58,138,0.06)', color: '#1e3a8a', fontSize: 12, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
+                                style={{ height: 30, padding: '0 10px', borderRadius: 10, border: '1px solid var(--secco-gold-30)', background: 'var(--secco-gold-10)', color: 'var(--secco-gold)', fontSize: 12, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
                               >
                                 Editar
                               </button>
                               <button
                                 type="button"
                                 onClick={() => handleEliminarVehiculo(cliente.id, v)}
-                                style={{ height: 30, padding: '0 10px', borderRadius: 10, border: '1px solid rgba(255,69,58,0.35)', background: 'rgba(255,69,58,0.08)', color: '#b42318', fontSize: 12, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
+                                style={{ height: 30, padding: '0 10px', borderRadius: 10, border: '1px solid var(--secco-red-35)', background: 'var(--secco-red-08)', color: 'var(--secco-red-dark)', fontSize: 12, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
                               >
                                 Eliminar
                               </button>
@@ -452,7 +454,7 @@ export default function ClientesListScreen({ onNavigate }) {
                         </div>
                       ))}
                       {(!vehiculosByCliente[cliente.id] || vehiculosByCliente[cliente.id].length === 0) && (
-                        <p style={{ margin: 0, color: '#6B6B6B', fontSize: 13 }}>Sin vehículos asociados</p>
+                        <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 13 }}>Sin vehículos asociados</p>
                       )}
                     </div>
                   )}
@@ -462,7 +464,7 @@ export default function ClientesListScreen({ onNavigate }) {
           ))}
           {!filtrados.length && (
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
-              <p style={{ color: '#6B6B6B', fontSize: 14 }}>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>
                 {filtro ? 'Sin resultados para tu búsqueda' : 'No hay clientes registrados'}
               </p>
             </div>
@@ -485,13 +487,13 @@ export default function ClientesListScreen({ onNavigate }) {
             display: 'flex',
             justifyContent: 'center',
           }}>
-            <div className="s-card" style={{ width: '100%', maxWidth: 520, background: '#FFFFFF', border: '1.5px solid #E0E0E0' }}>
+            <div className="s-card" style={{ width: '100%', maxWidth: 520, background: 'var(--background)', border: '1.5px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
                 <div>
-                  <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#111114' }}>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--foreground)' }}>
                     {editId ? 'Editar cliente' : 'Nuevo cliente'}
                   </p>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B6B6B' }}>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted-foreground)' }}>
                     Completa los datos y guarda.
                   </p>
                 </div>
@@ -499,7 +501,7 @@ export default function ClientesListScreen({ onNavigate }) {
                   type="button"
                   onClick={() => setModalOpen(false)}
                   disabled={saving}
-                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 900, lineHeight: 1, padding: 0, color: '#6B6B6B', opacity: saving ? 0.4 : 1 }}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 900, lineHeight: 1, padding: 0, color: 'var(--muted-foreground)', opacity: saving ? 0.4 : 1 }}
                 >
                   ×
                 </button>
@@ -507,7 +509,7 @@ export default function ClientesListScreen({ onNavigate }) {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ gridColumn: '1 / -1' }}>
-                  <label className="s-label">Nombre <span style={{ color: '#FF453A' }}>*</span></label>
+                  <label className="s-label">Nombre <span style={{ color: 'var(--destructive)' }}>*</span></label>
                   <input className="s-input" value={form.nombre} onChange={(e) => setForm((p) => ({ ...p, nombre: e.target.value }))} />
                 </div>
                 <div>
@@ -541,31 +543,31 @@ export default function ClientesListScreen({ onNavigate }) {
         <div>
           <div onClick={closeDetalleCliente} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.28)', zIndex: 72 }} />
           <div style={{ position: 'fixed', left: 12, right: 12, top: '10vh', zIndex: 73, display: 'flex', justifyContent: 'center' }}>
-            <div className="s-card" style={{ width: '100%', maxWidth: 560, background: '#FFFFFF', border: '1.5px solid #E0E0E0' }}>
+            <div className="s-card" style={{ width: '100%', maxWidth: 560, background: 'var(--background)', border: '1.5px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
                 <div>
-                  <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#111114' }}>Detalle cliente</p>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B6B6B' }}>{detalleCliente.nombre}</p>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--foreground)' }}>Detalle cliente</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted-foreground)' }}>{detalleCliente.nombre}</p>
                 </div>
-                <button type="button" onClick={closeDetalleCliente} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 900, lineHeight: 1, padding: 0, color: '#6B6B6B' }}>×</button>
+                <button type="button" onClick={closeDetalleCliente} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 900, lineHeight: 1, padding: 0, color: 'var(--muted-foreground)' }}>×</button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label className="s-label">Nombre</label>
-                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: '#FAFAFA' }}>{detalleCliente.nombre || '—'}</div>
+                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: 'var(--card)' }}>{detalleCliente.nombre || '—'}</div>
                 </div>
                 <div>
                   <label className="s-label">RUT</label>
-                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: '#FAFAFA', fontFamily: 'monospace' }}>{detalleCliente.rut || '—'}</div>
+                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: 'var(--card)', fontFamily: 'monospace' }}>{detalleCliente.rut || '—'}</div>
                 </div>
                 <div>
                   <label className="s-label">Teléfono</label>
-                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: '#FAFAFA' }}>{detalleCliente.telefono || '—'}</div>
+                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: 'var(--card)' }}>{detalleCliente.telefono || '—'}</div>
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label className="s-label">Email</label>
-                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: '#FAFAFA' }}>{detalleCliente.email || '—'}</div>
+                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: 'var(--card)' }}>{detalleCliente.email || '—'}</div>
                 </div>
               </div>
 
@@ -576,7 +578,7 @@ export default function ClientesListScreen({ onNavigate }) {
                 <button
                   type="button"
                   onClick={() => handleEliminarDesdeDetalle(detalleCliente)}
-                  style={{ height: 44, width: '100%', borderRadius: 12, border: '1.5px solid rgba(255,69,58,0.35)', background: 'rgba(255,69,58,0.08)', color: '#b42318', fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
+                  style={{ height: 44, width: '100%', borderRadius: 12, border: '1.5px solid var(--secco-red-35)', background: 'var(--secco-red-08)', color: 'var(--secco-red-dark)', fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   Eliminar
                 </button>
@@ -590,43 +592,43 @@ export default function ClientesListScreen({ onNavigate }) {
         <div>
           <div onClick={closeDetalleVehiculo} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.28)', zIndex: 72 }} />
           <div style={{ position: 'fixed', left: 12, right: 12, top: '10vh', zIndex: 73, display: 'flex', justifyContent: 'center' }}>
-            <div className="s-card" style={{ width: '100%', maxWidth: 560, background: '#FFFFFF', border: '1.5px solid #E0E0E0' }}>
+            <div className="s-card" style={{ width: '100%', maxWidth: 560, background: 'var(--background)', border: '1.5px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
                 <div>
-                  <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#111114' }}>Detalle vehículo</p>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B6B6B' }}>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--foreground)' }}>Detalle vehículo</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted-foreground)' }}>
                     {detalleVehiculo.patente ? (
                       <PatenteLink patente={detalleVehiculo.patente} mono />
                     ) : '—'}
                   </p>
                 </div>
-                <button type="button" onClick={closeDetalleVehiculo} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 900, lineHeight: 1, padding: 0, color: '#6B6B6B' }}>×</button>
+                <button type="button" onClick={closeDetalleVehiculo} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 900, lineHeight: 1, padding: 0, color: 'var(--muted-foreground)' }}>×</button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
                   <label className="s-label">Patente</label>
-                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: '#FAFAFA', fontFamily: 'monospace' }}>{detalleVehiculo.patente || '—'}</div>
+                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: 'var(--card)', fontFamily: 'monospace' }}>{detalleVehiculo.patente || '—'}</div>
                 </div>
                 <div>
                   <label className="s-label">Año</label>
-                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: '#FAFAFA' }}>{detalleVehiculo.anio || '—'}</div>
+                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: 'var(--card)' }}>{detalleVehiculo.anio || '—'}</div>
                 </div>
                 <div>
                   <label className="s-label">Marca</label>
-                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: '#FAFAFA' }}>{detalleVehiculo.marca || '—'}</div>
+                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: 'var(--card)' }}>{detalleVehiculo.marca || '—'}</div>
                 </div>
                 <div>
                   <label className="s-label">Modelo</label>
-                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: '#FAFAFA' }}>{detalleVehiculo.modelo || '—'}</div>
+                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: 'var(--card)' }}>{detalleVehiculo.modelo || '—'}</div>
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label className="s-label">Color</label>
-                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: '#FAFAFA' }}>{detalleVehiculo.color || '—'}</div>
+                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: 'var(--card)' }}>{detalleVehiculo.color || '—'}</div>
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label className="s-label">VIN</label>
-                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: '#FAFAFA', fontFamily: 'monospace' }}>{detalleVehiculo.vin || '—'}</div>
+                  <div className="s-input" style={{ padding: '14px 16px', fontSize: 15, background: 'var(--card)', fontFamily: 'monospace' }}>{detalleVehiculo.vin || '—'}</div>
                 </div>
               </div>
             </div>
@@ -638,20 +640,20 @@ export default function ClientesListScreen({ onNavigate }) {
         <div>
           <div onClick={() => !vehiculoSaving && setVehiculoModalOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.28)', zIndex: 72 }} />
           <div style={{ position: 'fixed', left: 12, right: 12, top: '10vh', zIndex: 73, display: 'flex', justifyContent: 'center' }}>
-            <div className="s-card" style={{ width: '100%', maxWidth: 560, background: '#FFFFFF', border: '1.5px solid #E0E0E0' }}>
+            <div className="s-card" style={{ width: '100%', maxWidth: 560, background: 'var(--background)', border: '1.5px solid var(--border)' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 12 }}>
                 <div>
-                  <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#111114' }}>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 900, color: 'var(--foreground)' }}>
                     {vehiculoEditId ? 'Editar vehículo' : 'Nuevo vehículo'}
                   </p>
-                  <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6B6B6B' }}>Asociado al cliente</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--muted-foreground)' }}>Asociado al cliente</p>
                 </div>
-                <button type="button" onClick={() => setVehiculoModalOpen(false)} disabled={vehiculoSaving} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 900, lineHeight: 1, padding: 0, color: '#6B6B6B', opacity: vehiculoSaving ? 0.4 : 1 }}>×</button>
+                <button type="button" onClick={() => setVehiculoModalOpen(false)} disabled={vehiculoSaving} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 22, fontWeight: 900, lineHeight: 1, padding: 0, color: 'var(--muted-foreground)', opacity: vehiculoSaving ? 0.4 : 1 }}>×</button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="s-label">Patente <span style={{ color: '#FF453A' }}>*</span></label>
+                  <label className="s-label">Patente <span style={{ color: 'var(--destructive)' }}>*</span></label>
                   <input className="s-input" value={vehiculoForm.patente} onChange={(e) => setVehiculoForm((p) => ({ ...p, patente: e.target.value.toUpperCase() }))} />
                 </div>
                 <div>

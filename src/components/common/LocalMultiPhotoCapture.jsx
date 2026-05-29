@@ -61,9 +61,9 @@ export default function LocalMultiPhotoCapture({ label, required = false, fotos 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span className="s-label" style={{ marginBottom: 0 }}>{label}</span>
-            {required && <span style={{ color: '#FF453A', fontSize: 12 }}>*</span>}
+            {required && <span style={{ color: 'var(--destructive)', fontSize: 12 }}>*</span>}
           </div>
-          <span style={{ color: '#6B6B6B', fontSize: 12 }}>{normalized.length} foto(s)</span>
+          <span style={{ color: 'var(--muted-foreground)', fontSize: 12 }}>{normalized.length} foto(s)</span>
         </div>
       )}
 
@@ -79,7 +79,7 @@ export default function LocalMultiPhotoCapture({ label, required = false, fotos 
                   aspectRatio: '1 / 1',
                   objectFit: 'cover',
                   borderRadius: 12,
-                  border: '1px solid #E0E0E0',
+                  border: '1px solid var(--border)',
                   display: 'block',
                 }}
               />
@@ -90,8 +90,8 @@ export default function LocalMultiPhotoCapture({ label, required = false, fotos 
                   position: 'absolute',
                   top: 8,
                   right: 8,
-                  background: '#FF453A',
-                  color: '#FFFFFF',
+                  background: 'var(--destructive)',
+                  color: 'var(--background)',
                   border: 'none',
                   borderRadius: '50%',
                   width: 28,
@@ -122,7 +122,7 @@ export default function LocalMultiPhotoCapture({ label, required = false, fotos 
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            background: '#F5F5F5',
+            background: 'var(--card)',
             border: '1.5px dashed #E0E0E0',
             borderRadius: 12,
             pointerEvents: 'none',
@@ -134,7 +134,7 @@ export default function LocalMultiPhotoCapture({ label, required = false, fotos 
           ) : (
             <>
               <span style={{ fontSize: 28 }}>📷</span>
-              <span style={{ color: '#6B6B6B', fontSize: 13, fontWeight: 500 }}>Galería o cámara</span>
+              <span style={{ color: 'var(--muted-foreground)', fontSize: 13, fontWeight: 500 }}>Galería o cámara</span>
             </>
           )}
         </div>

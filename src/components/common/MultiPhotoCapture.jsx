@@ -114,7 +114,7 @@ export default function MultiPhotoCapture({ seccion, item = null, label = 'Fotos
     <div style={{ width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <span className="s-label" style={{ marginBottom: 0 }}>{label}</span>
-        <span style={{ color: '#6B6B6B', fontSize: 12 }}>{fotos?.length || 0} foto(s)</span>
+        <span style={{ color: 'var(--muted-foreground)', fontSize: 12 }}>{fotos?.length || 0} foto(s)</span>
       </div>
 
       {!!fotos?.length && (
@@ -129,7 +129,7 @@ export default function MultiPhotoCapture({ seccion, item = null, label = 'Fotos
                   aspectRatio: '1 / 1',
                   objectFit: 'cover',
                   borderRadius: 8,
-                  border: '1px solid #E0E0E0',
+                  border: '1px solid var(--border)',
                   display: 'block',
                 }}
               />
@@ -140,8 +140,8 @@ export default function MultiPhotoCapture({ seccion, item = null, label = 'Fotos
                   position: 'absolute',
                   top: 8,
                   right: 8,
-                  background: '#FF453A',
-                  color: '#FFFFFF',
+                  background: 'var(--destructive)',
+                  color: 'var(--background)',
                   border: 'none',
                   borderRadius: '50%',
                   width: 26,
@@ -172,7 +172,7 @@ export default function MultiPhotoCapture({ seccion, item = null, label = 'Fotos
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            background: '#F5F5F5',
+            background: 'var(--card)',
             border: '1.5px dashed #E0E0E0',
             borderRadius: 8,
             pointerEvents: 'none',
@@ -184,7 +184,7 @@ export default function MultiPhotoCapture({ seccion, item = null, label = 'Fotos
           ) : (
             <>
               <span style={{ fontSize: 24 }}>📷</span>
-              <span style={{ color: '#6B6B6B', fontSize: 13, fontWeight: 600 }}>+ Galería o cámara</span>
+              <span style={{ color: 'var(--muted-foreground)', fontSize: 13, fontWeight: 600 }}>+ Galería o cámara</span>
             </>
           )}
         </div>

@@ -4,6 +4,7 @@ import { cotizacionService } from '../../services/cotizacionService'
 import { useToast } from '../../components/common/ToastProvider'
 import { useConfirm } from '../../components/common/ConfirmProvider'
 import PatenteLink from '../../components/vehiculo/PatenteLink'
+import { useMobile } from '../../hooks/useMobile'
 
 const LIMITE_LISTA = 50
 
@@ -23,12 +24,12 @@ function statusKey(s) {
 function statusStyle(status) {
   const k = statusKey(status)
   const map = {
-    borrador: { background: 'rgba(107,107,107,0.10)', color: '#6B6B6B', border: '1px solid #E0E0E0' },
-    lista: { background: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' },
-    enviada: { background: 'rgba(30,58,138,0.08)', color: '#1e3a8a', border: '1px solid rgba(30,58,138,0.25)' },
-    aprobada: { background: 'rgba(52,199,89,0.12)', color: '#1a7a34', border: '1px solid rgba(52,199,89,0.3)' },
-    rechazada: { background: 'rgba(255,69,58,0.08)', color: '#FF453A', border: '1px solid rgba(255,69,58,0.25)' },
-    sin_asignar: { background: '#F5F5F5', color: '#6B6B6B', border: '1px solid #E0E0E0' },
+    borrador: { background: 'var(--secco-muted-10)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' },
+    lista: { background: 'var(--secco-gold-10)', color: 'var(--secco-gold)', border: '1px solid var(--secco-gold-30)' },
+    enviada: { background: 'var(--secco-gold-10)', color: 'var(--secco-gold)', border: '1px solid var(--secco-gold-30)' },
+    aprobada: { background: 'var(--secco-green-12)', color: 'var(--secco-green-dark)', border: '1px solid var(--secco-green-30)' },
+    rechazada: { background: 'var(--secco-red-08)', color: 'var(--destructive)', border: '1px solid var(--secco-red-25)' },
+    sin_asignar: { background: 'var(--card)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' },
   }
   return map[k] || map.borrador
 }
@@ -40,6 +41,7 @@ function money(v) {
 export default function CotizacionesListScreen({ onNavigate }) {
   const toast = useToast()
   const { confirm } = useConfirm()
+  const isMobile = useMobile()
   const [cotizaciones, setCotizaciones] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
@@ -126,7 +128,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
   }
 
   return (
-    <div style={{ padding: '14px 12px 40px', maxWidth: 1040, margin: '0 auto' }}>
+    <div style={{ padding: isMobile ? '10px 8px 40px' : '14px 12px 40px', maxWidth: 1040, margin: '0 auto' }}>
       <style>{`
         .cot-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
         .cot-actions { display: inline-flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 6px; flex-shrink: 0; }
@@ -150,11 +152,11 @@ export default function CotizacionesListScreen({ onNavigate }) {
 
       <div className="cot-toolbar">
         <div style={{ minWidth: 0 }}>
-          <h2 style={{ color: '#111114', fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.3px' }}>Cotizaciones</h2>
-          <p style={{ margin: '6px 0 0', color: '#6B6B6B', fontSize: 13, lineHeight: 1.45, maxWidth: 520 }}>
+          <h2 style={{ color: 'var(--foreground)', fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.3px' }}>Cotizaciones</h2>
+          <p style={{ margin: '6px 0 0', color: 'var(--muted-foreground)', fontSize: 13, lineHeight: 1.45, maxWidth: 520 }}>
             Presupuestos del taller. Puedes buscar por patente o revisar los últimos cargados.
           </p>
-          <p style={{ margin: '8px 0 0', color: '#111114', fontSize: 12, fontWeight: 600 }}>
+          <p style={{ margin: '8px 0 0', color: 'var(--foreground)', fontSize: 12, fontWeight: 600 }}>
             {loading ? 'Cargando…' : `${cotizaciones.length} resultado${cotizaciones.length === 1 ? '' : 's'}`}
             {loading && cotizaciones.length > 0 ? ' · actualizando' : ''}
           </p>
@@ -185,7 +187,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
             style={{ width: '100%', paddingLeft: 36 }}
           />
         </div>
-        <p style={{ color: '#AAAAAA', fontSize: 12, margin: 0, lineHeight: 1.45 }}>
+        <p style={{ color: 'var(--placeholder)', fontSize: 12, margin: 0, lineHeight: 1.45 }}>
           Presupuesto inicial vinculado al acta: paso «Trabajo solicitado» del formulario de acta. El borrador en servidor se crea al guardar o al cambiar de estado.
         </p>
       </div>
@@ -197,12 +199,12 @@ export default function CotizacionesListScreen({ onNavigate }) {
             marginBottom: 14,
             padding: 14,
             borderRadius: 12,
-            border: '1px solid rgba(255,69,58,0.35)',
-            background: 'rgba(255,69,58,0.06)',
+            border: '1px solid var(--secco-red-35)',
+            background: 'var(--secco-red-08)',
           }}
         >
           <p className="s-error" style={{ margin: 0 }}>{error}</p>
-          <p style={{ color: '#6B6B6B', fontSize: 13, margin: '10px 0 0' }}>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: '10px 0 0' }}>
             Revisa la sesión y la API. Puedes intentar de nuevo o crear un presupuesto nuevo.
           </p>
         </div>
@@ -210,7 +212,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
 
       {mostrarSpinnerCompleto ? (
         <div className="s-card" style={{ padding: 36, textAlign: 'center', borderRadius: 14 }}>
-          <p style={{ color: '#6B6B6B', fontSize: 14, margin: 0 }}>Cargando cotizaciones…</p>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 14, margin: 0 }}>Cargando cotizaciones…</p>
         </div>
       ) : (
         <div className="cot-grid">
@@ -234,13 +236,13 @@ export default function CotizacionesListScreen({ onNavigate }) {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flex: 1 }}>
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ margin: '0 0 4px', color: '#1e3a8a', fontSize: 14, fontWeight: 800 }}>
+                      <p style={{ margin: '0 0 4px', color: 'var(--secco-gold)', fontSize: 14, fontWeight: 800 }}>
                         COT-{cot.numero_cotizacion}
                         {cot.vista_cliente?.titulo && (
-                          <span style={{ color: '#6B6B6B', fontWeight: 600 }}> · {cot.vista_cliente.titulo}</span>
+                          <span style={{ color: 'var(--muted-foreground)', fontWeight: 600 }}> · {cot.vista_cliente.titulo}</span>
                         )}
                       </p>
-                      <p style={{ margin: '0 0 4px', color: descripcionVehiculo ? '#111114' : '#6B6B6B', fontSize: 13, lineHeight: 1.35, fontStyle: descripcionVehiculo ? 'normal' : 'italic' }}>
+                      <p style={{ margin: '0 0 4px', color: descripcionVehiculo ? 'var(--foreground)' : 'var(--muted-foreground)', fontSize: 13, lineHeight: 1.35, fontStyle: descripcionVehiculo ? 'normal' : 'italic' }}>
                         {veh.patente ? (
                           <>
                             {[veh.marca, veh.modelo].filter(Boolean).join(' · ')}
@@ -252,7 +254,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
                         )}
                       </p>
                       {cli.nombre ? (
-                        <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>{cli.nombre}</p>
+                        <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 12 }}>{cli.nombre}</p>
                       ) : null}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
@@ -269,7 +271,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
                         {STATUS_LABEL[statusKey(cot.status)] || cot.status}
                       </span>
                       {(cot.total || cot.total_final_cliente) ? (
-                        <span style={{ fontSize: 13, fontWeight: 800, color: '#a98225' }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--secco-green)' }}>
                           {money(cot.total_final_cliente || cot.total)}
                         </span>
                       ) : null}
@@ -290,8 +292,8 @@ export default function CotizacionesListScreen({ onNavigate }) {
                     disabled={eliminando}
                     title="Eliminar cotización (requiere permisos de administrador)"
                     style={{
-                      borderColor: 'rgba(255,69,58,0.35)',
-                      color: '#FF453A',
+                      borderColor: 'var(--secco-red-35)',
+                      color: 'var(--destructive)',
                     }}
                     onClick={() => handleEliminar(cot)}
                   >
@@ -311,13 +313,13 @@ export default function CotizacionesListScreen({ onNavigate }) {
                 textAlign: 'center',
                 borderRadius: 14,
                 border: '1px dashed #D0D0D0',
-                background: '#FAFAFA',
+                background: 'var(--card)',
               }}
             >
-              <p style={{ color: '#111114', fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>
+              <p style={{ color: 'var(--foreground)', fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>
                 {filtroDebounced ? 'No hay cotizaciones para esa patente' : 'No hay cotizaciones en el listado'}
               </p>
-              <p style={{ color: '#6B6B6B', fontSize: 14, margin: '0 0 20px', lineHeight: 1.5 }}>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: 14, margin: '0 0 20px', lineHeight: 1.5 }}>
                 {filtroDebounced
                   ? 'Prueba con otra patente o limpia el buscador para ver los últimos registros.'
                   : 'Abre el editor para cargar ítems y totales, o genera un presupuesto desde una acta.'}

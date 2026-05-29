@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import ProgressBar from '../../components/common/ProgressBar'
+import { useMobile } from '../../hooks/useMobile'
 import DiagSeccion1_Motor from '../../components/diagnostico/DiagSeccion1_Motor'
 import DiagSeccion2_Frenos from '../../components/diagnostico/DiagSeccion2_Frenos'
 import DiagSeccion3_SuspDelantera from '../../components/diagnostico/DiagSeccion3_SuspDelantera'
@@ -35,6 +36,7 @@ function tipoLabel(tipo) {
 const COMMENT_ITEM = 'Comentario general de la sección'
 
 export default function DiagnosticoForm({ onVolver }) {
+  const isMobile = useMobile()
   const { diagnosticoData, updateDiagnostico } = useDiagnostico()
   const [seccion, setSeccion] = useState(() => {
     if (diagnosticoData.status !== 'proceso') return 1
@@ -136,35 +138,35 @@ export default function DiagnosticoForm({ onVolver }) {
 
   if (exito) {
     return (
-      <div className="fade-in" style={{ minHeight: '100svh', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
-        <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(169,130,37,0.10)', border: '2px solid #a98225', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, marginBottom: 24, color: '#a98225' }}>
+      <div className="fade-in" style={{ minHeight: '100svh', background: 'var(--background)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--secco-gold-10)', border: '2px solid #a98225', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, marginBottom: 24, color: 'var(--secco-gold)' }}>
           ✓
         </div>
-        <h2 style={{ color: '#111114', fontSize: 22, fontWeight: 600, textAlign: 'center', margin: '0 0 8px' }}>Diagnóstico listo</h2>
-        <p style={{ color: '#6B6B6B', fontSize: 14, textAlign: 'center', margin: '0 0 32px' }}>
-          Mantención sugerida: <strong style={{ color: '#a98225' }}>{tipoLabel(diagnosticoData.tipo_mantencion)}</strong>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 22, fontWeight: 600, textAlign: 'center', margin: '0 0 8px' }}>Diagnóstico listo</h2>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 14, textAlign: 'center', margin: '0 0 32px' }}>
+          Mantención sugerida: <strong style={{ color: 'var(--secco-gold)' }}>{tipoLabel(diagnosticoData.tipo_mantencion)}</strong>
         </p>
 
         <div className="s-card" style={{ width: '100%', maxWidth: 380, marginBottom: 28 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
             <div>
-              <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 16, color: '#111114' }}>
+              <p style={{ margin: '0 0 2px', fontWeight: 600, fontSize: 16, color: 'var(--foreground)' }}>
                 {diagnosticoData.marca} {diagnosticoData.modelo}
               </p>
-              <p style={{ margin: 0, fontSize: 13, color: '#6B6B6B' }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--muted-foreground)' }}>
                 {diagnosticoData.patente} · {diagnosticoData.anio}
               </p>
             </div>
             {diagnosticoData.numero_diagnostico && (
-              <span style={{ background: '#a98225', color: '#FFFFFF', fontWeight: 700, fontSize: 12, padding: '4px 10px', borderRadius: 8 }}>
+              <span style={{ background: 'var(--secco-gold)', color: 'var(--background)', fontWeight: 700, fontSize: 12, padding: '4px 10px', borderRadius: 8 }}>
                 DG-{diagnosticoData.numero_diagnostico}
               </span>
             )}
           </div>
-          <div style={{ borderTop: '1px solid #E0E0E0', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <p style={{ margin: 0, fontSize: 13, color: '#6B6B6B' }}><span style={{ color: '#111114', fontWeight: 500 }}>Cliente:</span> {diagnosticoData.nombre_cliente}</p>
-            <p style={{ margin: 0, fontSize: 13, color: '#6B6B6B' }}><span style={{ color: '#111114', fontWeight: 500 }}>Kilometraje:</span> {Number(diagnosticoData.kilometraje || 0).toLocaleString('es-CL')} km</p>
-            <p style={{ margin: 0, fontSize: 13, color: '#6B6B6B' }}><span style={{ color: '#111114', fontWeight: 500 }}>Estado:</span> Listo para presupuesto</p>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--muted-foreground)' }}><span style={{ color: 'var(--foreground)', fontWeight: 500 }}>Cliente:</span> {diagnosticoData.nombre_cliente}</p>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--muted-foreground)' }}><span style={{ color: 'var(--foreground)', fontWeight: 500 }}>Kilometraje:</span> {Number(diagnosticoData.kilometraje || 0).toLocaleString('es-CL')} km</p>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--muted-foreground)' }}><span style={{ color: 'var(--foreground)', fontWeight: 500 }}>Estado:</span> Listo para presupuesto</p>
           </div>
         </div>
 
@@ -176,21 +178,21 @@ export default function DiagnosticoForm({ onVolver }) {
   }
 
   return (
-    <div style={{ minHeight: '100svh', background: '#FFFFFF' }}>
+    <div style={{ minHeight: '100svh', background: 'var(--background)' }}>
       <div style={{
-        background: '#FFFFFF', borderBottom: '1px solid #E0E0E0',
-        padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
+        background: 'var(--background)', borderBottom: '1px solid var(--border)',
+        padding: isMobile ? '10px 12px' : '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
         position: 'sticky', top: 0, zIndex: 40,
       }}>
         <button type="button" onClick={onVolver}
-          style={{ background: '#F5F5F5', border: '1px solid #E0E0E0', color: '#111114', borderRadius: 8, width: 36, height: 36, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--foreground)', borderRadius: 8, width: 36, height: 36, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >←</button>
         <img src="/logo-secco.png" alt="SECCO"
           style={{ height: 28, objectFit: 'contain' }}
           onError={(e) => { e.target.style.display = 'none' }}
         />
         <div style={{ flex: 1 }} />
-        <span style={{ background: 'rgba(169,130,37,0.10)', color: '#a98225', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8, fontFamily: 'monospace', border: '1px solid rgba(169,130,37,0.25)' }}>
+        <span style={{ background: 'var(--secco-gold-10)', color: 'var(--secco-gold)', fontSize: 12, fontWeight: 700, padding: '5px 10px', borderRadius: 8, fontFamily: 'monospace', border: '1px solid var(--secco-gold-30)' }}>
           {diagnosticoData.patente || `DG-${diagnosticoData.numero_diagnostico || ''}`}
         </span>
       </div>
@@ -212,12 +214,12 @@ export default function DiagnosticoForm({ onVolver }) {
       {error && (
         <div style={{
           position: 'fixed', bottom: 16, left: 16, right: 16, zIndex: 50,
-          background: '#FF453A', color: '#FFFFFF', borderRadius: 8, padding: '14px 16px',
+          background: 'var(--destructive)', color: 'var(--background)', borderRadius: 8, padding: '14px 16px',
           display: 'flex', alignItems: 'flex-start', gap: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
         }}>
           <span style={{ flexShrink: 0 }}>⚠️</span>
           <p style={{ margin: 0, fontSize: 14, flex: 1 }}>{error}</p>
-          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: '#FFFFFF', fontSize: 20, cursor: 'pointer', lineHeight: 1, padding: 0 }}>×</button>
+          <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: 'var(--background)', fontSize: 20, cursor: 'pointer', lineHeight: 1, padding: 0 }}>×</button>
         </div>
       )}
 

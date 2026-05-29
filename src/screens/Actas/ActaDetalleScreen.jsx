@@ -5,14 +5,16 @@ import { useRol } from '../../context/AuthContext'
 import { generarPDFDesdeActaGuardada } from '../../utils/pdf'
 import { useToast } from '../../components/common/ToastProvider'
 import { useConfirm } from '../../components/common/ConfirmProvider'
+import { useRol } from '../../context/AuthContext'
 import PatenteLink from '../../components/vehiculo/PatenteLink'
+import { useMobile } from '../../hooks/useMobile'
 
 function Campo({ label, value }) {
   if (value === null || value === undefined || value === '') return null
   return (
     <div>
-      <p style={{ margin: '0 0 2px', fontSize: 10, color: '#6B6B6B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</p>
-      <p style={{ margin: 0, fontSize: 13, color: '#111114', fontWeight: 500, lineHeight: 1.4 }}>{value}</p>
+      <p style={{ margin: '0 0 2px', fontSize: 10, color: 'var(--muted-foreground)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</p>
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--foreground)', fontWeight: 500, lineHeight: 1.4 }}>{value}</p>
     </div>
   )
 }
@@ -20,7 +22,7 @@ function Campo({ label, value }) {
 function Seccion({ titulo, children }) {
   return (
     <div style={{ marginBottom: 20 }}>
-      <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#a98225', borderBottom: '1px solid rgba(169,130,37,0.2)', paddingBottom: 6 }}>{titulo}</p>
+      <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--secco-gold)', borderBottom: '1px solid var(--secco-gold-10)', paddingBottom: 6 }}>{titulo}</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px' }}>
         {children}
       </div>
@@ -33,21 +35,22 @@ function statusText(val) {
 }
 
 function statusStyle(status) {
-  if (status === 'cerrada') return { background: 'rgba(52,199,89,0.12)', color: '#1a7a34', border: '1px solid rgba(52,199,89,0.3)' }
-  if (status === 'borrador') return { background: 'rgba(107,107,107,0.10)', color: '#6B6B6B', border: '1px solid #E0E0E0' }
-  return { background: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' }
+  if (status === 'cerrada') return { background: 'var(--secco-green-12)', color: 'var(--secco-green-dark)', border: '1px solid var(--secco-green-30)' }
+  if (status === 'borrador') return { background: 'var(--secco-muted-10)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' }
+  return { background: 'var(--secco-gold-10)', color: 'var(--secco-gold)', border: '1px solid var(--secco-gold-30)' }
 }
 
 export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
   const toast = useToast()
   const { confirm } = useConfirm()
-  const { puedeCrearDiagnostico } = useRol()
+  const isMobile = useMobile()
+  const { esAdmin } = useRol()
   const [acta, setActa] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [descargando, setDescargando] = useState(false)
   const [eliminando, setEliminando] = useState(false)
-  const [creandoDiag, setCreandoDiag] = useState(false)
+  const [iniciandoOT, setIniciandoOT] = useState(false)
 
   useEffect(() => {
     if (!actaId) { setError('ID de acta no especificado'); setLoading(false); return }
@@ -65,20 +68,17 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
     finally { setDescargando(false) }
   }
 
-  async function handleIniciarDiagnostico() {
-    if (!acta?.id) return
-    setCreandoDiag(true)
+  async function handleIniciarOT() {
+    if (!actaId) return
+    setIniciandoOT(true)
     try {
-      const patente = acta.vehiculos?.patente || ''
-      const diag = await diagnosticoService.crear(acta.id, patente || undefined)
-      const id = diag?.id
-      if (!id) throw new Error('No se obtuvo id del diagnóstico')
-      toast.success('Diagnóstico listo para completar')
-      onNavigate?.(`diagnosticos/${id}/editar`)
+      const ot = await actaService.iniciarOT(actaId)
+      toast.success('Orden de trabajo iniciada')
+      onNavigate?.(`ordenes-trabajo/${ot.id}`)
     } catch (e) {
-      toast.error(e?.message || 'No se pudo iniciar el diagnóstico')
+      toast.error(e?.message ? `Error: ${e.message}` : 'Error al crear orden de trabajo')
     } finally {
-      setCreandoDiag(false)
+      setIniciandoOT(false)
     }
   }
 
@@ -106,7 +106,7 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
   if (loading) {
     return (
       <div style={{ padding: '48px 16px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando acta...</p>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Cargando acta...</p>
       </div>
     )
   }
@@ -136,16 +136,16 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
   return (
     <div style={{ padding: '0 0 40px' }}>
       {/* Header */}
-      <div style={{ background: '#FFFFFF', borderBottom: '1px solid #E0E0E0', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, position: 'sticky', top: 0, zIndex: 40 }}>
+      <div style={{ background: 'var(--background)', borderBottom: '1px solid var(--border)', padding: isMobile ? '10px 12px' : '12px 16px', display: 'flex', alignItems: 'center', gap: 10, position: 'sticky', top: 0, zIndex: 40 }}>
         <button type="button" onClick={onVolver}
-          style={{ background: '#F5F5F5', border: '1px solid #E0E0E0', color: '#111114', borderRadius: 8, width: 36, height: 36, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--foreground)', borderRadius: 8, width: 36, height: 36, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
           ←
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#111114' }}>
+          <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--foreground)' }}>
             {acta.numero_acta ? `Acta #${acta.numero_acta}` : 'Acta de recepción'}
           </p>
-          <p style={{ margin: 0, fontSize: 12, color: '#6B6B6B' }}>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--muted-foreground)' }}>
             {vehiculo.marca} {vehiculo.modelo}
             {vehiculo.patente ? (
               <> · <PatenteLink patente={vehiculo.patente} mono /></>
@@ -156,14 +156,14 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
           type="button"
           onClick={handleDescargarPDF}
           disabled={descargando}
-          style={{ height: 36, padding: '0 14px', borderRadius: 8, border: '1.5px solid #a98225', background: '#FFFFFF', color: '#a98225', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, opacity: descargando ? 0.5 : 1 }}
+          style={{ height: 36, padding: '0 14px', borderRadius: 8, border: '1.5px solid #a98225', background: 'var(--background)', color: 'var(--secco-gold)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, opacity: descargando ? 0.5 : 1 }}
         >
           {descargando ? '...' : '↓ PDF'}
         </button>
         <button
           type="button"
           onClick={() => { toast.info('Editando acta…'); onNavigate?.(`actas/${actaId}/editar`) }}
-          style={{ height: 36, padding: '0 12px', borderRadius: 8, border: '1.5px solid #1e3a8a', background: '#FFFFFF', color: '#1e3a8a', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+          style={{ height: 36, padding: '0 12px', borderRadius: 8, border: '1.5px solid var(--secco-gold)', background: 'var(--background)', color: 'var(--secco-gold)', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
         >
           Editar
         </button>
@@ -171,7 +171,7 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
           type="button"
           onClick={handleEliminar}
           disabled={eliminando}
-          style={{ height: 36, padding: '0 12px', borderRadius: 8, border: '1.5px solid rgba(255,69,58,0.55)', background: 'rgba(255,69,58,0.06)', color: '#FF453A', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, opacity: eliminando ? 0.6 : 1 }}
+          style={{ height: 36, padding: '0 12px', borderRadius: 8, border: '1.5px solid var(--secco-red-35)', background: 'var(--secco-red-08)', color: 'var(--destructive)', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, opacity: eliminando ? 0.6 : 1 }}
         >
           {eliminando ? '...' : 'Eliminar'}
         </button>
@@ -203,7 +203,7 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
             <Campo label="Año" value={vehiculo.anio} />
             {vehiculo.patente ? (
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 10, color: '#6B6B6B', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Patente</p>
+                <p style={{ margin: '0 0 2px', fontSize: 10, color: 'var(--muted-foreground)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Patente</p>
                 <PatenteLink patente={vehiculo.patente} mono style={{ fontSize: 13, fontWeight: 500 }} />
               </div>
             ) : null}
@@ -247,10 +247,10 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
         {/* Trabajo solicitado */}
         {acta.trabajo_solicitado && (
           <div className="s-card" style={{ marginBottom: 12 }}>
-            <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#a98225', borderBottom: '1px solid rgba(169,130,37,0.2)', paddingBottom: 6 }}>
+            <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--secco-gold)', borderBottom: '1px solid var(--secco-gold-10)', paddingBottom: 6 }}>
               Trabajo solicitado
             </p>
-            <p style={{ margin: 0, fontSize: 13, color: '#111114', lineHeight: 1.5, background: '#FAFAFA', borderRadius: 8, padding: '10px 12px', border: '1px solid #EEEEEE', whiteSpace: 'pre-wrap' }}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--foreground)', lineHeight: 1.5, background: 'var(--card)', borderRadius: 8, padding: '10px 12px', border: '1px solid #EEEEEE', whiteSpace: 'pre-wrap' }}>
               {acta.trabajo_solicitado}
             </p>
           </div>
@@ -268,13 +268,13 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
         {/* Fotos */}
         {fotos.length > 0 && (
           <div className="s-card" style={{ marginBottom: 12 }}>
-            <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px', color: '#a98225', borderBottom: '1px solid rgba(169,130,37,0.2)', paddingBottom: 6 }}>
+            <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--secco-gold)', borderBottom: '1px solid var(--secco-gold-10)', paddingBottom: 6 }}>
               Fotos ({fotos.length})
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
               {TIPOS_FOTO.flatMap((tipo) =>
                 (fotosMap[tipo] || []).map((url, idx) => (
-                  <div key={`${tipo}-${idx}`} style={{ borderRadius: 8, overflow: 'hidden', background: '#F5F5F5', border: '1px solid #EEEEEE', aspectRatio: '4/3' }}>
+                  <div key={`${tipo}-${idx}`} style={{ borderRadius: 8, overflow: 'hidden', background: 'var(--card)', border: '1px solid #EEEEEE', aspectRatio: '4/3' }}>
                     <img
                       src={url}
                       alt={tipo.replace(/_/g, ' ')}
@@ -291,29 +291,22 @@ export default function ActaDetalleScreen({ actaId, onNavigate, onVolver }) {
 
         {/* Acciones */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 24 }}>
-          {acta.diagnostico_id ? (
-            <>
-              <button
-                type="button"
-                className="s-btn-primary"
-                onClick={() => onNavigate?.(`diagnosticos/${acta.diagnostico_id}`)}
-              >
-                Ver diagnóstico →
-              </button>
-              <button
-                type="button"
-                className="s-btn-secondary"
-                onClick={() => onNavigate?.(`diagnosticos/${acta.diagnostico_id}/editar`)}
-              >
-                Continuar / editar checklist
-              </button>
-            </>
-          ) : puedeCrearDiagnostico ? (
+          {esAdmin && (
             <button
               type="button"
               className="s-btn-primary"
-              disabled={creandoDiag}
-              onClick={handleIniciarDiagnostico}
+              onClick={handleIniciarOT}
+              disabled={iniciandoOT}
+              style={{ opacity: iniciandoOT ? 0.7 : 1 }}
+            >
+              {iniciandoOT ? 'Creando orden...' : '📋 Iniciar Orden de Trabajo'}
+            </button>
+          )}
+          {acta.diagnostico_id && (
+            <button
+              type="button"
+              className="s-btn-secondary"
+              onClick={() => onNavigate?.(`diagnosticos/${acta.diagnostico_id}`)}
             >
               {creandoDiag ? 'Iniciando…' : 'Iniciar diagnóstico'}
             </button>

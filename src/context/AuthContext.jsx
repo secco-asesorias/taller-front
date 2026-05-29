@@ -100,20 +100,14 @@ async function resolverPerfil(session) {
   return perfil
 }
 
-/** Personal con rol técnico vía GET /api/usuarios (solo admin; filtro en cliente). */
 export async function listarTecnicos() {
-  try {
-    const data = await usuarioService.listar({ limite: 100 })
-    const lista = unwrapUsuariosApi(data)
-    return lista
-      .map((row) => normalizarPerfil(row))
-      .filter((p) => p?.rol === 'tecnico' && p.id)
-      .map((p) => ({ id: p.id, nombre: p.nombre || p.email || '' }))
-      .sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'))
-  } catch (e) {
-    if (e?.status === 403) return []
-    throw e
-  }
+  const { data, error } = await supabase
+    .from('perfiles')
+    .select('id, nombre')
+    .eq('rol', 'tecnico')
+    .order('nombre')
+  if (error) throw error
+  return data || []
 }
 
 const AuthContext = createContext(null)
@@ -181,7 +175,6 @@ export function useRol() {
     esRecepcionista: rol === 'recepcionista',
     puedeVerPresupuestos: rol === 'admin',
     puedeCrearActa: ['admin', 'recepcionista', 'tecnico'].includes(rol),
-    puedeCrearDiagnostico: ['admin', 'recepcionista'].includes(rol),
     puedeEditarDiagnostico: ['admin', 'tecnico'].includes(rol),
     puedeGestionarOTs: ['admin', 'tecnico'].includes(rol),
     puedeVerHistorial: ['admin', 'recepcionista'].includes(rol),

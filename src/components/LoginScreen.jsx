@@ -23,7 +23,7 @@ export default function LoginScreen() {
 
   return (
     <div style={{
-      minHeight: '100svh', background: '#FFFFFF',
+      minHeight: '100svh', background: 'var(--background)',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       justifyContent: 'center', padding: '40px 24px',
     }}>
@@ -32,7 +32,7 @@ export default function LoginScreen() {
         style={{ height: 56, objectFit: 'contain', marginBottom: 16 }}
         onError={(e) => { e.target.style.display = 'none' }}
       />
-      <p style={{ color: '#6B6B6B', fontSize: 13, margin: '0 0 32px' }}>
+      <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: '0 0 32px' }}>
         Acta de Recepción de Vehículos
       </p>
 
@@ -42,7 +42,7 @@ export default function LoginScreen() {
       >
         <div className="s-card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#111114', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>
               Email
             </label>
             <input
@@ -57,7 +57,7 @@ export default function LoginScreen() {
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#111114', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--foreground)', marginBottom: 6 }}>
               Contraseña
             </label>
             <input
@@ -72,7 +72,7 @@ export default function LoginScreen() {
           </div>
 
           {error && (
-            <p style={{ color: '#FF453A', fontSize: 12, margin: 0 }}>⚠ {error}</p>
+            <p style={{ color: 'var(--destructive)', fontSize: 12, margin: 0 }}>⚠ {error}</p>
           )}
 
           <button
@@ -89,7 +89,7 @@ export default function LoginScreen() {
         </div>
       </form>
 
-      <p style={{ color: '#AAAAAA', fontSize: 12, marginTop: 32 }}>
+      <p style={{ color: 'var(--placeholder)', fontSize: 12, marginTop: 32 }}>
         SECCO · Taller Mecánico
       </p>
 
