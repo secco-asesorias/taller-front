@@ -175,6 +175,7 @@ export function useRol() {
     esRecepcionista: rol === 'recepcionista',
     puedeVerPresupuestos: rol === 'admin',
     puedeCrearActa: ['admin', 'recepcionista', 'tecnico'].includes(rol),
+    puedeCrearDiagnostico: ['admin', 'recepcionista', 'tecnico'].includes(rol),
     puedeEditarDiagnostico: ['admin', 'tecnico'].includes(rol),
     puedeGestionarOTs: ['admin', 'tecnico'].includes(rol),
     puedeVerHistorial: ['admin', 'recepcionista'].includes(rol),

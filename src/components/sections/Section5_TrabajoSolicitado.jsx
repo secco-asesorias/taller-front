@@ -183,25 +183,6 @@ export default function Section5_TrabajoSolicitado({
           </div>
         )}
       </div>
-
-      {/* Sugerencias */}
-      <div className="s-card" style={{ marginBottom: 16 }}>
-        <p style={{ color: 'var(--muted-foreground)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 0, marginBottom: 14 }}>
-          Agregar rápido
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {SUGERENCIAS.map((s) => (
-            <button key={s} type="button" onClick={() => agregarSugerencia(s)}
-              style={{
-                padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-                background: 'var(--background)', border: '1px solid var(--border)', color: 'var(--muted-foreground)',
-                transition: 'border-color 120ms, color 120ms',
-              }}
-            >+ {s}</button>
-          ))}
-        </div>
-      </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
         <button type="button" onClick={handleSubmit} className="s-btn-primary">Continuar</button>
         <button type="button" onClick={onBack}    className="s-btn-secondary">Volver</button>

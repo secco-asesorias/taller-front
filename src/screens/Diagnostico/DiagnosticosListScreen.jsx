@@ -44,6 +44,7 @@ function clienteDe(diag) {
 
 export default function DiagnosticosListScreen({ onNavigate }) {
   const isMobile = useMobile()
+  const { puedeCrearDiagnostico } = useRol()
   const [diagnosticos, setDiagnosticos] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtroPatente, setFiltroPatente] = useState('')
