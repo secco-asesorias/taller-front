@@ -1,4 +1,5 @@
 import { useRol } from '../../context/AuthContext'
+import { useMobile } from '../../hooks/useMobile'
 
 const ACCIONES = [
   { label: 'Órdenes de Trabajo', ruta: 'ordenes-trabajo', icon: '⚙️', desc: 'Mis trabajos asignados', primary: true },
@@ -7,16 +8,17 @@ const ACCIONES = [
 
 export default function TecnicoDashboard({ onNavigate }) {
   const { nombre, rolEtiqueta } = useRol()
+  const isMobile = useMobile()
 
   return (
-    <div style={{ padding: '24px 16px 40px' }}>
+    <div style={{ padding: isMobile ? '16px 12px 40px' : '24px 16px 40px' }}>
       <div style={{ marginBottom: 24 }}>
-        <p style={{ color: '#6B6B6B', fontSize: 13, margin: '0 0 2px' }}>Bienvenido,</p>
-        <h2 style={{ color: '#111114', fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: '-0.3px' }}>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: '0 0 2px' }}>Bienvenido,</p>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 22, fontWeight: 700, margin: 0, letterSpacing: '-0.3px' }}>
           {nombre}
         </h2>
         {rolEtiqueta ? (
-          <p style={{ margin: '6px 0 0', color: '#6B6B6B', fontSize: 12 }}>{rolEtiqueta}</p>
+          <p style={{ margin: '6px 0 0', color: 'var(--muted-foreground)', fontSize: 12 }}>{rolEtiqueta}</p>
         ) : null}
         <div className="s-divider" />
       </div>
@@ -27,8 +29,8 @@ export default function TecnicoDashboard({ onNavigate }) {
             key={a.ruta}
             onClick={() => onNavigate(a.ruta)}
             style={{
-              background: a.primary ? '#a98225' : '#FFFFFF',
-              color: a.primary ? '#FFFFFF' : '#111114',
+              background: a.primary ? 'var(--secco-gold)' : 'var(--background)',
+              color: a.primary ? 'var(--background)' : 'var(--foreground)',
               border: a.primary ? 'none' : '1.5px solid #E0E0E0',
               borderRadius: 14,
               padding: '20px 18px',
@@ -37,7 +39,7 @@ export default function TecnicoDashboard({ onNavigate }) {
               display: 'flex',
               alignItems: 'center',
               gap: 16,
-              boxShadow: a.primary ? '0 2px 8px rgba(169,130,37,0.18)' : '0 1px 4px rgba(0,0,0,0.06)',
+              boxShadow: a.primary ? '0 2px 8px var(--secco-gold-10)' : '0 1px 4px rgba(0,0,0,0.06)',
               fontFamily: 'inherit',
             }}
           >

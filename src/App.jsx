@@ -97,7 +97,7 @@ function ActaEditarRoute() {
   if (!acta) {
     return (
       <div style={{ padding: '48px 16px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando acta...</p>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Cargando acta...</p>
       </div>
     )
   }
@@ -181,7 +181,7 @@ function CotizacionDetalleRoute() {
   if (cotizacionCargando) {
     return (
       <div style={{ padding: '48px 16px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando cotización...</p>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Cargando cotización...</p>
       </div>
     )
   }
@@ -200,7 +200,7 @@ function CotizacionDetalleRoute() {
   if (!cotizacionActiva) {
     return (
       <div style={{ padding: '48px 16px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6B6B', fontSize: 14 }}>No hay datos de cotización.</p>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>No hay datos de cotización.</p>
         <button type="button" className="s-btn-secondary" style={{ marginTop: 16 }} onClick={() => navigate('/cotizaciones')}>
           Volver al listado
         </button>
@@ -236,7 +236,7 @@ function OTDetalleRoute() {
   if (!otActiva) {
     return (
       <div style={{ padding: '48px 16px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando orden de trabajo...</p>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Cargando orden de trabajo...</p>
       </div>
     )
   }
@@ -313,7 +313,7 @@ function ActaEntregaEditarRoute() {
   if (!acta) {
     return (
       <div style={{ padding: '48px 16px', textAlign: 'center' }}>
-        <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando acta de entrega…</p>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Cargando acta de entrega…</p>
       </div>
     )
   }
@@ -365,7 +365,7 @@ function AuthGate() {
 
   if (cargando) {
     return (
-      <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1e3a8a' }}>
+      <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--secco-black)' }}>
         <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>Cargando...</p>
       </div>
     )

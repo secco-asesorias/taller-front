@@ -17,14 +17,14 @@ export default function Section5_Entrega({ onNext, onBack }) {
   return (
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
-        <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>Taller</p>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>Trabajo realizado</h2>
+        <p style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>Taller</p>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>Trabajo realizado</h2>
         <div className="s-divider" />
       </div>
 
       <div className="s-card" style={{ marginBottom: 16 }}>
-        <label className="s-label">Descripción <span style={{ color: '#FF453A' }}>*</span></label>
-        <p style={{ color: '#6B6B6B', fontSize: 13, marginTop: 0, marginBottom: 12 }}>
+        <label className="s-label">Descripción <span style={{ color: 'var(--destructive)' }}>*</span></label>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 13, marginTop: 0, marginBottom: 12 }}>
           Resume los trabajos ejecutados y el estado del vehículo al momento de la entrega.
         </p>
         <textarea
@@ -36,7 +36,7 @@ export default function Section5_Entrega({ onNext, onBack }) {
           style={{ resize: 'none' }}
         />
         {errores.trabajo_realizado && <p className="s-error">{errores.trabajo_realizado}</p>}
-        <p style={{ margin: '8px 0 0', fontSize: 11, color: '#AAAAAA', textAlign: 'right' }}>{chars} caracteres</p>
+        <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--placeholder)', textAlign: 'right' }}>{chars} caracteres</p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>

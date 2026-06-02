@@ -24,8 +24,8 @@ export default function FuelSelector({ value, onChange }) {
                 padding: '12px 4px',
                 borderRadius: 10,
                 border: active ? '1.5px solid #a98225' : '1.5px solid #E0E0E0',
-                background: active ? '#a98225' : '#FFFFFF',
-                color: active ? '#FFFFFF' : '#6B6B6B',
+                background: active ? 'var(--secco-gold)' : 'var(--background)',
+                color: active ? 'var(--background)' : 'var(--muted-foreground)',
                 fontSize: 13,
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -40,18 +40,18 @@ export default function FuelSelector({ value, onChange }) {
       </div>
 
       {selected && (
-        <div style={{ background: '#F5F5F5', border: '1px solid #E0E0E0', borderRadius: 10, padding: '10px 14px' }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ color: '#6B6B6B', fontSize: 11 }}>Vacío</span>
-            <span style={{ color: '#a98225', fontSize: 12, fontWeight: 600 }}>{selected.label}</span>
-            <span style={{ color: '#6B6B6B', fontSize: 11 }}>Lleno</span>
+            <span style={{ color: 'var(--muted-foreground)', fontSize: 11 }}>Vacío</span>
+            <span style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 600 }}>{selected.label}</span>
+            <span style={{ color: 'var(--muted-foreground)', fontSize: 11 }}>Lleno</span>
           </div>
-          <div style={{ height: 4, background: '#E0E0E0', borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
             <div
               style={{
                 height: '100%',
                 width: `${selected.pct}%`,
-                background: selected.pct < 25 ? '#FF453A' : selected.pct < 50 ? '#FF9F0A' : '#a98225',
+                background: selected.pct < 25 ? 'var(--destructive)' : selected.pct < 50 ? 'var(--warning)' : 'var(--secco-gold)',
                 borderRadius: 2,
                 transition: 'width 400ms ease',
               }}

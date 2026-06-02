@@ -3,6 +3,7 @@ import { unwrapApiList } from '../../lib/unwrapApiList'
 import { actaService } from '../../services/actaService'
 import { useToast } from '../../components/common/ToastProvider'
 import PatenteLink from '../../components/vehiculo/PatenteLink'
+import { useMobile } from '../../hooks/useMobile'
 
 const LIMITE_LISTA = 50
 
@@ -25,9 +26,9 @@ function actaStatusKey(status) {
 
 function statusStyle(status) {
   const s = actaStatusKey(status)
-  if (s === 'cerrada') return { background: 'rgba(52,199,89,0.12)', color: '#1a7a34', border: '1px solid rgba(52,199,89,0.3)' }
-  if (s === 'borrador') return { background: 'rgba(107,107,107,0.10)', color: '#6B6B6B', border: '1px solid #E0E0E0' }
-  return { background: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' }
+  if (s === 'cerrada') return { background: 'var(--secco-green-12)', color: 'var(--secco-green-dark)', border: '1px solid var(--secco-green-30)' }
+  if (s === 'borrador') return { background: 'var(--secco-muted-10)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' }
+  return { background: 'var(--secco-gold-10)', color: 'var(--secco-gold)', border: '1px solid var(--secco-gold-30)' }
 }
 
 function puedeContinuarActa(status) {
@@ -37,6 +38,7 @@ function puedeContinuarActa(status) {
 
 export default function ActasListScreen({ onNavigate }) {
   const toast = useToast()
+  const isMobile = useMobile()
   const [actas, setActas] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
@@ -86,7 +88,7 @@ export default function ActasListScreen({ onNavigate }) {
   }, [actas, statusFiltro])
 
   return (
-    <div style={{ padding: '14px 12px 40px' }}>
+    <div style={{ padding: isMobile ? '10px 8px 40px' : '14px 12px 40px' }}>
       <style>{`
         .actas-toolbar { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; }
         .actas-tools { display: grid; grid-template-columns: 1fr 170px; gap: 10px; margin-bottom: 14px; }
@@ -104,8 +106,8 @@ export default function ActasListScreen({ onNavigate }) {
 
       <div className="actas-toolbar">
         <div style={{ minWidth: 0 }}>
-          <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 800, margin: 0 }}>Actas</h2>
-          <p style={{ margin: '4px 0 0', color: '#6B6B6B', fontSize: 12 }}>
+          <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 800, margin: 0 }}>Actas</h2>
+          <p style={{ margin: '4px 0 0', color: 'var(--muted-foreground)', fontSize: 12 }}>
             {loading ? 'Cargando...' : `${filtradas.length} resultado${filtradas.length === 1 ? '' : 's'}`}
           </p>
         </div>
@@ -142,7 +144,7 @@ export default function ActasListScreen({ onNavigate }) {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px 0' }}>
-          <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando actas...</p>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Cargando actas...</p>
         </div>
       ) : (
         <div className="actas-grid">
@@ -164,7 +166,7 @@ export default function ActasListScreen({ onNavigate }) {
                 cursor: 'pointer',
                 border: '1.5px solid #E0E0E0',
                 borderRadius: 14,
-                background: '#FFFFFF',
+                background: 'var(--background)',
                 fontFamily: 'inherit',
                 width: '100%',
                 boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
@@ -172,16 +174,16 @@ export default function ActasListScreen({ onNavigate }) {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ margin: '0 0 2px', color: '#1e3a8a', fontSize: 15, fontWeight: 700 }}>
+                  <p style={{ margin: '0 0 2px', color: 'var(--secco-gold)', fontSize: 15, fontWeight: 700 }}>
                     #{acta.numero_acta}
                     {acta.vehiculos?.patente ? (
                       <> — <PatenteLink patente={acta.vehiculos.patente} mono stopPropagation /></>
                     ) : null}
                   </p>
-                  <p style={{ margin: '0 0 2px', color: '#111114', fontSize: 13, fontWeight: 500 }}>
+                  <p style={{ margin: '0 0 2px', color: 'var(--foreground)', fontSize: 13, fontWeight: 500 }}>
                     {acta.clientes?.nombre}
                   </p>
-                  <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>
+                  <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 12 }}>
                     {acta.vehiculos?.marca} {acta.vehiculos?.modelo}
                   </p>
                 </div>
@@ -205,7 +207,7 @@ export default function ActasListScreen({ onNavigate }) {
                   }}
                 >
                   {acta.fecha_ingreso ? (
-                    <p style={{ margin: 0, color: '#6B6B6B', fontSize: 11 }}>
+                    <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 11 }}>
                       {new Date(acta.fecha_ingreso).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </p>
                   ) : (
@@ -236,7 +238,7 @@ export default function ActasListScreen({ onNavigate }) {
           ))}
           {!filtradas.length && (
             <div style={{ textAlign: 'center', padding: '48px 0' }}>
-              <p style={{ color: '#6B6B6B', fontSize: 14 }}>Sin resultados</p>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Sin resultados</p>
             </div>
           )}
         </div>

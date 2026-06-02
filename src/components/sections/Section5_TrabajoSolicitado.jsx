@@ -60,14 +60,14 @@ export default function Section5_TrabajoSolicitado({
   return (
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
-        <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>Técnico</p>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>Trabajo Solicitado</h2>
+        <p style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>Técnico</p>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>Trabajo Solicitado</h2>
         <div className="s-divider" />
       </div>
 
       <div className="s-card" style={{ marginBottom: 16 }}>
-        <label className="s-label">Descripción <span style={{ color: '#FF453A' }}>*</span></label>
-        <p style={{ color: '#6B6B6B', fontSize: 13, marginTop: 0, marginBottom: 12 }}>
+        <label className="s-label">Descripción <span style={{ color: 'var(--destructive)' }}>*</span></label>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 13, marginTop: 0, marginBottom: 12 }}>
           Describe qué busca el cliente y qué espera del servicio.
         </p>
         <textarea
@@ -84,29 +84,29 @@ export default function Section5_TrabajoSolicitado({
             ? <p className="s-error" style={{ margin: 0 }}>{errores.trabajo_solicitado}</p>
             : <span />
           }
-          <span style={{ color: '#AAAAAA', fontSize: 12 }}>{chars} car.</span>
+          <span style={{ color: 'var(--placeholder)', fontSize: 12 }}>{chars} car.</span>
         </div>
       </div>
 
       <div className="s-card" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
           <div>
-            <p style={{ color: '#a98225', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', margin: '0 0 4px' }}>
+            <p style={{ color: 'var(--secco-gold)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px', margin: '0 0 4px' }}>
               Presupuesto inicial
             </p>
-            <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0, lineHeight: 1.45 }}>
+            <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: 0, lineHeight: 1.45 }}>
               Puedes asociar un presupuesto sin asignar a esta acta. Luego seguirá siendo posible crear un presupuesto final.
             </p>
           </div>
           {presupuestoSeleccionadoId && (
-            <span style={{ background: 'rgba(34,139,80,0.12)', color: '#228b50', fontSize: 11, fontWeight: 800, padding: '4px 8px', borderRadius: 6, flexShrink: 0 }}>
+            <span style={{ background: 'rgba(34,139,80,0.12)', color: 'var(--secco-green)', fontSize: 11, fontWeight: 800, padding: '4px 8px', borderRadius: 6, flexShrink: 0 }}>
               Asignado
             </span>
           )}
         </div>
 
         {!actaListaParaPresupuesto && (
-          <p style={{ color: '#8a6a1a', fontSize: 12, margin: '0 0 10px', lineHeight: 1.4 }}>
+          <p style={{ color: 'var(--secco-gold-dark)', fontSize: 12, margin: '0 0 10px', lineHeight: 1.4 }}>
             Para crear o asignar un presupuesto, el acta debe estar guardada como borrador (avanzá desde cliente y vehículo, o esperá a que figure «Guardado» arriba).
           </p>
         )}
@@ -116,9 +116,9 @@ export default function Section5_TrabajoSolicitado({
           disabled={creandoPresupuestoInicial || !!presupuestoSeleccionadoId || !actaListaParaPresupuesto || typeof onCrearPresupuestoInicial !== 'function'}
           style={{
             width: '100%',
-            border: '1.5px solid rgba(169,130,37,0.35)',
-            background: 'rgba(169,130,37,0.06)',
-            color: '#a98225',
+            border: '1.5px solid var(--secco-gold-30)',
+            background: 'var(--secco-gold-10)',
+            color: 'var(--secco-gold)',
             borderRadius: 10,
             padding: '12px 14px',
             fontSize: 13,
@@ -133,9 +133,9 @@ export default function Section5_TrabajoSolicitado({
         </button>
 
         {cargandoPresupuestos ? (
-          <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0 }}>Cargando presupuestos sin asignar...</p>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: 0 }}>Cargando presupuestos sin asignar...</p>
         ) : !presupuestosSinAsignar.length ? (
-          <p style={{ color: '#6B6B6B', fontSize: 13, margin: 0 }}>No hay presupuestos sin asignar disponibles.</p>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: 0 }}>No hay presupuestos sin asignar disponibles.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {presupuestosSinAsignar.map((cot) => {
@@ -152,8 +152,8 @@ export default function Section5_TrabajoSolicitado({
                   style={{
                     width: '100%',
                     textAlign: 'left',
-                    background: '#FAFAFA',
-                    border: '1px solid #E0E0E0',
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
                     borderRadius: 10,
                     padding: 12,
                     cursor: asignando || presupuestoSeleccionadoId ? 'default' : 'pointer',
@@ -163,17 +163,17 @@ export default function Section5_TrabajoSolicitado({
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ margin: '0 0 2px', color: '#111114', fontSize: 14, fontWeight: 700 }}>
+                      <p style={{ margin: '0 0 2px', color: 'var(--foreground)', fontSize: 14, fontWeight: 700 }}>
                         {titulo}
                       </p>
-                      <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>
+                      <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 12 }}>
                         COT-{cot.numero_cotizacion}
                         {veh.patente ? ` \u00b7 ${veh.patente}` : ''}
                         {veh.marca || veh.modelo ? ` \u00b7 ${[veh.marca, veh.modelo].filter(Boolean).join(' ')}` : ''}
                         {cli.nombre ? ` \u00b7 ${cli.nombre}` : ''}
                       </p>
                     </div>
-                    <span style={{ color: '#a98225', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+                    <span style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
                       {asignando ? 'Asignando...' : 'Asignar'}
                     </span>
                   </div>
@@ -183,25 +183,6 @@ export default function Section5_TrabajoSolicitado({
           </div>
         )}
       </div>
-
-      {/* Sugerencias */}
-      <div className="s-card" style={{ marginBottom: 16 }}>
-        <p style={{ color: '#6B6B6B', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 0, marginBottom: 14 }}>
-          Agregar rápido
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {SUGERENCIAS.map((s) => (
-            <button key={s} type="button" onClick={() => agregarSugerencia(s)}
-              style={{
-                padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-                background: '#FFFFFF', border: '1px solid #E0E0E0', color: '#6B6B6B',
-                transition: 'border-color 120ms, color 120ms',
-              }}
-            >+ {s}</button>
-          ))}
-        </div>
-      </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
         <button type="button" onClick={handleSubmit} className="s-btn-primary">Continuar</button>
         <button type="button" onClick={onBack}    className="s-btn-secondary">Volver</button>

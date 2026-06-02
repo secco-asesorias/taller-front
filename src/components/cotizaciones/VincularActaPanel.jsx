@@ -154,13 +154,13 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
   const blockAll = disabled || accionando
 
   return (
-    <div style={{ padding: '14px 18px', borderBottom: '1px solid #E0E0E0', background: '#FFFFFF' }}>
+    <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', background: 'var(--background)' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#111114' }}>Acta vinculada</p>
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--foreground)' }}>Acta vinculada</p>
         {tieneAsignacion && actaActual?.numero_acta && (
           <span style={{
-            fontSize: 11, fontWeight: 700, color: '#1a7a34',
-            background: 'rgba(52,199,89,0.10)', border: '1px solid rgba(52,199,89,0.3)',
+            fontSize: 11, fontWeight: 700, color: 'var(--secco-green-dark)',
+            background: 'rgba(52,199,89,0.10)', border: '1px solid var(--secco-green-30)',
             padding: '2px 8px', borderRadius: 12,
           }}>
             ACT-{actaActual.numero_acta}
@@ -169,22 +169,22 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
       </div>
 
       {!cotizacion?.id && (
-        <p style={{ margin: '8px 0 0', fontSize: 11, color: '#6B6B6B', lineHeight: 1.45 }}>
+        <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--muted-foreground)', lineHeight: 1.45 }}>
           Guardá la cotización en el servidor (botón «Guardar borrador» arriba) para poder vincularla a un acta.
         </p>
       )}
 
       {cotizacion?.id && tieneAsignacion && !modoBuscar && (
         <>
-          <p style={{ margin: '10px 0 4px', fontSize: 13, color: '#111114', fontWeight: 600 }}>
+          <p style={{ margin: '10px 0 4px', fontSize: 13, color: 'var(--foreground)', fontWeight: 600 }}>
             {descripcionVehiculo(actaActual) || 'Acta sin vehículo'}
           </p>
           {nombreCliente(actaActual) && (
-            <p style={{ margin: '0 0 8px', fontSize: 12, color: '#6B6B6B' }}>
+            <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--muted-foreground)' }}>
               {nombreCliente(actaActual)}
             </p>
           )}
-          <p style={{ margin: '0 0 10px', fontSize: 11, color: '#6B6B6B' }}>
+          <p style={{ margin: '0 0 10px', fontSize: 11, color: 'var(--muted-foreground)' }}>
             Estado del acta: <strong>{statusLabel(actaActual?.status)}</strong>
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -197,8 +197,8 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
                 fontSize: 12,
                 fontWeight: 700,
                 background: '#FFF',
-                color: '#a98225',
-                border: '1px solid rgba(169,130,37,0.45)',
+                color: 'var(--secco-gold)',
+                border: '1px solid var(--secco-gold-30)',
                 borderRadius: 8,
                 cursor: blockAll ? 'default' : 'pointer',
                 fontFamily: 'inherit',
@@ -215,8 +215,8 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
                 fontSize: 12,
                 fontWeight: 700,
                 background: '#FFF',
-                color: '#FF453A',
-                border: '1px solid rgba(255,69,58,0.35)',
+                color: 'var(--destructive)',
+                border: '1px solid var(--secco-red-35)',
                 borderRadius: 8,
                 cursor: blockAll ? 'default' : 'pointer',
                 fontFamily: 'inherit',
@@ -230,7 +230,7 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
 
       {cotizacion?.id && !tieneAsignacion && !modoBuscar && (
         <>
-          <p style={{ margin: '8px 0 10px', fontSize: 11, color: '#6B6B6B', lineHeight: 1.45 }}>
+          <p style={{ margin: '8px 0 10px', fontSize: 11, color: 'var(--muted-foreground)', lineHeight: 1.45 }}>
             Sin acta vinculada. Asigna una para que el presupuesto se pueda aprobar y generar OT.
           </p>
           <button
@@ -241,9 +241,9 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
               padding: '7px 14px',
               fontSize: 12,
               fontWeight: 700,
-              background: 'rgba(169,130,37,0.12)',
-              color: '#a98225',
-              border: '1px solid rgba(169,130,37,0.35)',
+              background: 'var(--secco-gold-10)',
+              color: 'var(--secco-gold)',
+              border: '1px solid var(--secco-gold-30)',
               borderRadius: 8,
               cursor: blockAll ? 'default' : 'pointer',
               fontFamily: 'inherit',
@@ -268,10 +268,10 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
                 flex: 1,
                 fontSize: 12,
                 padding: '7px 10px',
-                border: '1px solid #E0E0E0',
+                border: '1px solid var(--border)',
                 borderRadius: 8,
                 outline: 'none',
-                color: '#111114',
+                color: 'var(--foreground)',
                 fontFamily: 'monospace',
                 letterSpacing: '1px',
               }}
@@ -283,9 +283,9 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
                 padding: '7px 12px',
                 fontSize: 12,
                 fontWeight: 600,
-                background: '#F5F5F5',
-                color: '#6B6B6B',
-                border: '1px solid #E0E0E0',
+                background: 'var(--card)',
+                color: 'var(--muted-foreground)',
+                border: '1px solid var(--border)',
                 borderRadius: 8,
                 cursor: 'pointer',
                 fontFamily: 'inherit',
@@ -296,11 +296,11 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
           </div>
 
           {buscando && (
-            <p style={{ margin: 0, fontSize: 11, color: '#6B6B6B' }}>Buscando…</p>
+            <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>Buscando…</p>
           )}
 
           {!buscando && resultados.length === 0 && (
-            <p style={{ margin: 0, fontSize: 11, color: '#6B6B6B' }}>
+            <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)' }}>
               {filtro.trim() ? 'No se encontraron actas para esa patente.' : 'No hay actas recientes para mostrar.'}
             </p>
           )}
@@ -318,19 +318,19 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
                     alignItems: 'center',
                     gap: 8,
                     padding: '8px 10px',
-                    background: yaEsLaActual ? 'rgba(52,199,89,0.06)' : '#FAFAFA',
-                    border: '1px solid #E0E0E0',
+                    background: yaEsLaActual ? 'rgba(52,199,89,0.06)' : 'var(--card)',
+                    border: '1px solid var(--border)',
                     borderRadius: 8,
                   }}
                 >
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#111114' }}>
+                    <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--foreground)' }}>
                       ACT-{acta.numero_acta || '—'} · {descripcionVehiculo(acta)}
                     </p>
                     {nombreCliente(acta) && (
-                      <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6B6B6B' }}>{nombreCliente(acta)}</p>
+                      <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--muted-foreground)' }}>{nombreCliente(acta)}</p>
                     )}
-                    <p style={{ margin: '2px 0 0', fontSize: 10, color: '#AAAAAA' }}>
+                    <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--placeholder)' }}>
                       {statusLabel(acta.status)}
                     </p>
                   </div>
@@ -342,8 +342,8 @@ export default function VincularActaPanel({ cotizacion, onVinculada, onError, di
                       padding: '6px 10px',
                       fontSize: 11,
                       fontWeight: 700,
-                      background: yaEsLaActual ? '#E0E0E0' : '#a98225',
-                      color: yaEsLaActual ? '#6B6B6B' : '#FFF',
+                      background: yaEsLaActual ? 'var(--border)' : 'var(--secco-gold)',
+                      color: yaEsLaActual ? 'var(--muted-foreground)' : '#FFF',
                       border: 'none',
                       borderRadius: 6,
                       cursor: blockAll || yaEsLaActual ? 'default' : 'pointer',

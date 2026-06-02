@@ -25,8 +25,8 @@ function EstadoSelector({ options, value, onChange }) {
             style={{
               padding: '16px 10px', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', transition: 'all 150ms',
               border: active ? '1.5px solid #a98225' : '1.5px solid #E0E0E0',
-              background: active ? 'rgba(169,130,37,0.10)' : '#FFFFFF',
-              color: active ? '#a98225' : '#6B6B6B',
+              background: active ? 'var(--secco-gold-10)' : 'var(--background)',
+              color: active ? 'var(--secco-gold)' : 'var(--muted-foreground)',
             }}
           >{op.label}</button>
         )
@@ -120,18 +120,18 @@ export default function Section4_EstadoVehiculo({ onNext, onBack, variant = 'ing
   return (
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
       <div style={{ marginBottom: 28 }}>
-        <p style={{ color: '#a98225', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>Técnico</p>
-        <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>Estado del Vehículo</h2>
+        <p style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>Técnico</p>
+        <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 600, letterSpacing: '-0.3px', margin: 0 }}>Estado del Vehículo</h2>
         <div className="s-divider" />
       </div>
 
       {/* 4A — Exterior */}
       <div className="s-card" style={{ marginBottom: 16 }}>
-        <p style={{ color: '#a98225', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 0, marginBottom: 16 }}>
+        <p style={{ color: 'var(--secco-gold)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 0, marginBottom: 16 }}>
           · Exterior
         </p>
 
-        <label className="s-label">Estado general <span style={{ color: '#FF453A' }}>*</span></label>
+        <label className="s-label">Estado general <span style={{ color: 'var(--destructive)' }}>*</span></label>
         <EstadoSelector
           options={[
             { value: 'sin_danos', label: 'Sin daños visibles' },
@@ -144,7 +144,7 @@ export default function Section4_EstadoVehiculo({ onNext, onBack, variant = 'ing
 
         {formData.estado_exterior === 'con_danos' && (
           <div style={{ marginTop: 16 }}>
-            <label className="s-label">Descripción de daños <span style={{ color: '#FF453A' }}>*</span></label>
+            <label className="s-label">Descripción de daños <span style={{ color: 'var(--destructive)' }}>*</span></label>
             <textarea rows={3} value={formData.detalle_exterior}
               onChange={(e) => updateForm({ detalle_exterior: e.target.value })}
               placeholder="Rayones, abolladuras, zona afectada"
@@ -156,11 +156,11 @@ export default function Section4_EstadoVehiculo({ onNext, onBack, variant = 'ing
         )}
 
         <div style={{ marginTop: 20 }}>
-          <label className="s-label">Fotos obligatorias <span style={{ color: '#FF453A' }}>*</span></label>
+          <label className="s-label">Fotos obligatorias <span style={{ color: 'var(--destructive)' }}>*</span></label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {FOTOS_EXTERIOR.map((f) => (
               <div key={f.key}>
-                <p style={{ color: '#6B6B6B', fontSize: 11, fontWeight: 500, textAlign: 'center', marginBottom: 6 }}>{f.icon} {f.label}</p>
+                <p style={{ color: 'var(--muted-foreground)', fontSize: 11, fontWeight: 500, textAlign: 'center', marginBottom: 6 }}>{f.icon} {f.label}</p>
                 <PhotoCapture label="" required preview={formData.fotos?.[f.key]} onChange={(r) => updateFoto(f.key, r)} />
               </div>
             ))}
@@ -179,11 +179,11 @@ export default function Section4_EstadoVehiculo({ onNext, onBack, variant = 'ing
 
       {/* 4B — Interior */}
       <div className="s-card" style={{ marginBottom: 16 }}>
-        <p style={{ color: '#a98225', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 0, marginBottom: 16 }}>
+        <p style={{ color: 'var(--secco-gold)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: 0, marginBottom: 16 }}>
           · Interior
         </p>
 
-        <label className="s-label">Estado general <span style={{ color: '#FF453A' }}>*</span></label>
+        <label className="s-label">Estado general <span style={{ color: 'var(--destructive)' }}>*</span></label>
         <EstadoSelector
           options={[
             { value: 'buen_estado',       label: 'Buen estado' },
@@ -196,7 +196,7 @@ export default function Section4_EstadoVehiculo({ onNext, onBack, variant = 'ing
 
         {formData.estado_interior === 'con_observaciones' && (
           <div style={{ marginTop: 16 }}>
-            <label className="s-label">Observaciones <span style={{ color: '#FF453A' }}>*</span></label>
+            <label className="s-label">Observaciones <span style={{ color: 'var(--destructive)' }}>*</span></label>
             <textarea rows={3} value={formData.detalle_interior}
               onChange={(e) => updateForm({ detalle_interior: e.target.value })}
               placeholder="Tapicería, tablero, olores…"

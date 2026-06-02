@@ -9,7 +9,7 @@ export default function SignaturePad({ onChange, label = 'Firma' }) {
   useEffect(() => {
     const canvas = canvasRef.current
     const ctx = canvas.getContext('2d')
-    ctx.strokeStyle = '#a98225'
+    ctx.strokeStyle = 'var(--secco-gold)'
     ctx.lineWidth = 2.5
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
@@ -65,7 +65,7 @@ export default function SignaturePad({ onChange, label = 'Firma' }) {
           <button
             type="button"
             onClick={clear}
-            style={{ color: '#FF453A', fontSize: 12, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            style={{ color: 'var(--destructive)', fontSize: 12, fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             Borrar
           </button>
@@ -75,7 +75,7 @@ export default function SignaturePad({ onChange, label = 'Firma' }) {
       <div
         style={{
           position: 'relative',
-          background: '#FFFFFF',
+          background: 'var(--background)',
           border: '1.5px solid #E0E0E0',
           borderRadius: 12,
           overflow: 'hidden',
@@ -93,7 +93,7 @@ export default function SignaturePad({ onChange, label = 'Firma' }) {
               pointerEvents: 'none',
             }}
           >
-            <span style={{ color: '#AAAAAA', fontSize: 14 }}>Firme aquí con el dedo</span>
+            <span style={{ color: 'var(--placeholder)', fontSize: 14 }}>Firme aquí con el dedo</span>
           </div>
         )}
         <canvas

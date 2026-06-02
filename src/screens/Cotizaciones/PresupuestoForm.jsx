@@ -4,8 +4,8 @@ import { generarPDFPresupuestoCliente, generarPDFPresupuestoInterno } from '../.
 import VincularActaPanel from '../../components/cotizaciones/VincularActaPanel'
 import PatenteLink from '../../components/vehiculo/PatenteLink'
 import { isPatenteAbrible } from '../../lib/normalizePatente'
+import { useMobile } from '../../hooks/useMobile'
 
-// ─── Funciones de cálculo (puras) ────────────────────────────
 function precioFinalConMargen(costoBruto, margenPct) {
   const pct = Number(margenPct)
   if (!(pct > 0 && pct < 100)) return Math.round(Number(costoBruto) || 0)
@@ -13,7 +13,7 @@ function precioFinalConMargen(costoBruto, margenPct) {
   return Math.round(costoNeto / (1 - pct / 100) * 1.19)
 }
 
-/** Valores permitidos por el API en `items[].tipo` */
+
 const TIPOS_ITEM = Object.freeze(['repuesto', 'servicio', 'trabajo', 'mano_obra'])
 const TIPO_ITEM_LABELS = {
   repuesto: 'Repuesto',
@@ -22,10 +22,10 @@ const TIPO_ITEM_LABELS = {
   mano_obra: 'Mano de obra',
 }
 const TIPO_COLOR = {
-  repuesto: '#a98225',
-  servicio: '#228b50',
-  trabajo: '#1e3a8a',
-  mano_obra: '#5856D6',
+  repuesto: 'var(--secco-gold)',
+  servicio: 'var(--secco-green)',
+  trabajo: 'var(--secco-gold)',
+  mano_obra: 'var(--secco-purple)',
 }
 
 const TIPOS_LINEA = TIPOS_ITEM.filter((t) => t !== 'mano_obra')
@@ -41,7 +41,6 @@ function sanitizeTipoItem(raw) {
   return 'repuesto'
 }
 
-/** Tipo en filas de la tabla (sin mano_obra; eso va en el bloque M.O.) */
 function sanitizeTipoLinea(raw) {
   const t = sanitizeTipoItem(raw)
   return t === 'mano_obra' ? 'repuesto' : t
@@ -114,12 +113,11 @@ function calcularTotalesCotizacion(items = [], descuento = 0, overrides = {}) {
   }
 }
 
-// ─── Constantes ───────────────────────────────────────────────
+
 const PRESUPUESTO_TOTALE_STORAGE_KEY = 'secco_presupuesto_alto_panel_totales'
 const PRESUPUESTO_TOTALE_DEFAULT = 360
 const PRESUPUESTO_TOTALE_MIN = 168
 
-// ─── Utilidades ───────────────────────────────────────────────
 function money(v) {
   return `$${Math.round(Number(v) || 0).toLocaleString('es-CL')}`
 }
@@ -134,7 +132,6 @@ function statusText(value) {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
-/** Estados de cotización que el front y el API reconocen */
 const STATUS_COTIZACION = Object.freeze(['borrador', 'lista', 'enviada', 'aprobada', 'rechazada', 'sin_asignar'])
 
 function sanitizeCotizacionStatus(raw) {
@@ -171,28 +168,26 @@ function buildResumenInternoSnapshot(totales) {
     margen_pct: totales.margen_pct,
   }
 }
-/** Descripción de una fila M.O. al cargar desde el API (texto libre). */
+
 function moDescripcionFromApiItem(it) {
   if (!it) return ''
   return String(it.descripcion || '').trim()
 }
 
-// Separa ítems normales de la fila de mano de obra.
-// margenInicial se usa solo para ítems sin precio_unitario guardado.
 function separateItems(raw = [], margenInicial = 30) {
   const moItems = raw.filter((it) => sanitizeTipoItem(it.tipo) === 'mano_obra')
   const rest    = raw.filter((it) => sanitizeTipoItem(it.tipo) !== 'mano_obra')
 
   const rows = rest.map((it, i) => {
-    const cb = Number(it.costo_unitario)  || 0  // costo bruto (con IVA)
-    const pu = Number(it.precio_unitario) || 0  // precio final guardado (con IVA)
+    const cb = Number(it.costo_unitario)  || 0 
+    const pu = Number(it.precio_unitario) || 0 
     return {
       _id: `${i}-${Math.random().toString(36).slice(2, 7)}`,
       tipo: sanitizeTipoLinea(it.tipo),
       descripcion: it.descripcion || '',
       cantidad: Number(it.cantidad) || 1,
       costo_unitario:  cb > 0 ? cb : '',
-      // Precio guardado tiene prioridad. Si no hay precio pero sí costo, calcular con margen inicial.
+
       precio_unitario: pu > 0 ? pu : cb > 0 ? precioFinalConMargen(cb, margenInicial) : '',
     }
   })
@@ -303,51 +298,19 @@ const ITEM_API_PLACEHOLDER = {
 const EMPTY_CLIENTE_MANUAL = { nombre: '', telefono: '', email: '' }
 const EMPTY_VEHICULO_MANUAL = { marca: '', modelo: '', patente: '', anio: '' }
 
-function strCampo(...vals) {
-  for (const v of vals) {
-    if (v == null) continue
-    const s = String(v).trim()
-    if (s) return s
-  }
-  return ''
-}
-
-function actaRelacionada(cot) {
-  return cot?.actas || cot?.diagnosticos?.actas || {}
-}
-
-/** Cliente/vehículo del acta o relaciones directas; vista_cliente manual tiene prioridad si tiene valor. */
 function mergeClienteManual(cot) {
-  const acta = actaRelacionada(cot)
-  const rel = cot?.clientes || acta?.clientes || {}
-  const vista = cot?.vista_cliente?.cliente_manual || {}
-  return {
-    nombre: strCampo(vista.nombre, rel.nombre),
-    telefono: strCampo(vista.telefono, rel.telefono),
-    email: strCampo(vista.email, rel.email),
-  }
+  return { ...EMPTY_CLIENTE_MANUAL, ...(cot?.vista_cliente?.cliente_manual || {}) }
 }
 
 function mergeVehiculoManual(cot) {
-  const acta = actaRelacionada(cot)
-  const rel = cot?.vehiculos || acta?.vehiculos || {}
-  const vista = cot?.vista_cliente?.vehiculo_manual || {}
-  const anioRel = rel.anio != null && rel.anio !== '' ? String(rel.anio) : ''
-  return {
-    marca: strCampo(vista.marca, rel.marca),
-    modelo: strCampo(vista.modelo, rel.modelo),
-    patente: strCampo(vista.patente, rel.patente),
-    anio: strCampo(vista.anio, anioRel),
-  }
+  return { ...EMPTY_VEHICULO_MANUAL, ...(cot?.vista_cliente?.vehiculo_manual || {}) }
 }
 
-/** Ítems listos para API: sin filas vacías (Zod exige descripción). */
 function itemsGuardados(rows, manoObraRows, horasTrabajoNum, valorHoraClienteMo) {
   const raw = itemsForDB(rows, manoObraRows, horasTrabajoNum, valorHoraClienteMo).filter((it) => String(it.descripcion || '').trim())
   return raw.length ? raw : [ITEM_API_PLACEHOLDER]
 }
 
-/** Plantilla para `/cotizaciones/nueva` (sin POST hasta el primer guardado). */
 export function nuevaCotizacionPlantilla() {
   return {
     id: null,
@@ -396,7 +359,7 @@ function DiagnosticoPanel({ cotizacion }) {
 
   if (!diag) {
     return (
-      <div style={{ padding: 32, color: '#6B6B6B', fontSize: 13, textAlign: 'center' }}>
+      <div style={{ padding: 32, color: 'var(--muted-foreground)', fontSize: 13, textAlign: 'center' }}>
         <p style={{ fontSize: 28, margin: '0 0 8px' }}>📋</p>
         Sin diagnóstico vinculado.
       </div>
@@ -420,11 +383,11 @@ function DiagnosticoPanel({ cotizacion }) {
     <div style={{ height: '100%', overflowY: 'auto', padding: '20px 22px' }}>
       {/* Badges */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 14 }}>
-        <span style={{ background: '#a98225', color: '#FFF', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6 }}>
+        <span style={{ background: 'var(--secco-gold)', color: '#FFF', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6 }}>
           DG-{diag.numero_diagnostico}
         </span>
         {diag.tipo_mantencion && (
-          <span style={{ background: '#F5F5F5', color: '#111114', fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 6, border: '1px solid #E0E0E0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <span style={{ background: 'var(--card)', color: 'var(--foreground)', fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 6, border: '1px solid var(--border)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             {diag.tipo_mantencion}
           </span>
         )}
@@ -434,20 +397,20 @@ function DiagnosticoPanel({ cotizacion }) {
       <div style={{ marginBottom: 16 }}>
         {bullets.map(({ label, value, mono }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 5 }}>
-            <span style={{ fontSize: 10, color: '#AAAAAA', flexShrink: 0 }}>•</span>
-            <span style={{ fontSize: 11, color: '#6B6B6B', flexShrink: 0, minWidth: 68 }}>{label}</span>
-            <span style={{ fontSize: 12, color: '#111114', fontWeight: 500, fontFamily: mono ? 'monospace' : 'inherit', letterSpacing: mono ? '1px' : 'normal' }}>
+            <span style={{ fontSize: 10, color: 'var(--placeholder)', flexShrink: 0 }}>•</span>
+            <span style={{ fontSize: 11, color: 'var(--muted-foreground)', flexShrink: 0, minWidth: 68 }}>{label}</span>
+            <span style={{ fontSize: 12, color: 'var(--foreground)', fontWeight: 500, fontFamily: mono ? 'monospace' : 'inherit', letterSpacing: mono ? '1px' : 'normal' }}>
               {value}
             </span>
           </div>
         ))}
       </div>
 
-      <div style={{ height: 1, background: '#E0E0E0', margin: '0 0 16px' }} />
+      <div style={{ height: 1, background: 'var(--border)', margin: '0 0 16px' }} />
 
       {acta.trabajo_solicitado && (
         <DiagSection label="Trabajo solicitado" color="#6B6B6B">
-          <p style={{ margin: 0, fontSize: 12, color: '#111114', lineHeight: 1.6 }}>{acta.trabajo_solicitado}</p>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--foreground)', lineHeight: 1.6 }}>{acta.trabajo_solicitado}</p>
         </DiagSection>
       )}
       {urgentes.length > 0 && (
@@ -464,11 +427,11 @@ function DiagnosticoPanel({ cotizacion }) {
         <DiagSection label="Repuestos detectados" color="#6B6B6B">
           {repuestos.map((r, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <span style={{ color: '#AAAAAA', fontSize: 11, flexShrink: 0 }}>→</span>
-              <p style={{ margin: 0, fontSize: 12, color: '#111114', flex: 1 }}>
+              <span style={{ color: 'var(--placeholder)', fontSize: 11, flexShrink: 0 }}>→</span>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--foreground)', flex: 1 }}>
                 {r.nombre}{r.cantidad > 1 ? ` ×${r.cantidad}` : ''}
               </p>
-              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: r.urgencia === 'necesario' ? '#FF453A' : '#a98225' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: r.urgencia === 'necesario' ? 'var(--destructive)' : 'var(--secco-gold)' }}>
                 {r.urgencia}
               </span>
             </div>
@@ -476,9 +439,9 @@ function DiagnosticoPanel({ cotizacion }) {
         </DiagSection>
       )}
       {(diag.observaciones_grls || diag.observaciones_generales) && (
-        <div style={{ background: '#F5F5F5', border: '1px solid #E0E0E0', borderRadius: 8, padding: '10px 12px' }}>
+        <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px' }}>
           <p style={sLabel}>Observaciones</p>
-          <p style={{ margin: 0, fontSize: 12, color: '#111114', lineHeight: 1.6 }}>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--foreground)', lineHeight: 1.6 }}>
             {diag.observaciones_grls || diag.observaciones_generales}
           </p>
         </div>
@@ -501,8 +464,8 @@ function ChecklistItem({ item, icon, iconColor }) {
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 5 }}>
       <span style={{ color: iconColor, fontSize: 11, flexShrink: 0, marginTop: 1 }}>{icon}</span>
       <div>
-        <p style={{ margin: 0, fontSize: 12, color: '#111114', fontWeight: 500 }}>{item.item}</p>
-        {item.observacion && <p style={{ margin: '2px 0 0', fontSize: 11, color: '#6B6B6B' }}>{item.observacion}</p>}
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--foreground)', fontWeight: 500 }}>{item.item}</p>
+        {item.observacion && <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--muted-foreground)' }}>{item.observacion}</p>}
       </div>
     </div>
   )
@@ -510,11 +473,9 @@ function ChecklistItem({ item, icon, iconColor }) {
 
 const sLabel = {
   margin: '0 0 6px', fontSize: 11, fontWeight: 700,
-  textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6B6B',
+  textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--muted-foreground)',
 }
 
-// ─── SpreadsheetRow ───────────────────────────────────────────
-// Columna «Concepto»: repuesto, servicio, trabajo (mano_obra va en el bloque M.O.).
 function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onEnter, autocompletePool }) {
   const total = rowTotal(row)
   const tipoSelectValue = TIPOS_LINEA.includes(row.tipo) ? row.tipo : 'repuesto'
@@ -522,10 +483,10 @@ function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onE
 
   return (
     <tr
-      style={{ background: isActive ? '#FFFDF5' : '#FFFFFF', transition: 'background 80ms' }}
+      style={{ background: isActive ? '#FFFDF5' : 'var(--background)', transition: 'background 80ms' }}
     >
       {/* # */}
-      <td style={td({ width: 28, textAlign: 'center', color: '#CCCCCC', fontSize: 11, userSelect: 'none' })}>
+      <td style={td({ width: 28, textAlign: 'center', color: 'var(--placeholder)', fontSize: 11, userSelect: 'none' })}>
         {index + 1}
       </td>
 
@@ -538,7 +499,7 @@ function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onE
             onFocus={() => onFocus(row._id)}
             style={{
               width: '100%', border: 'none', background: 'transparent', outline: 'none',
-              fontSize: 11, fontWeight: 700, color: TIPO_COLOR[tipoSelectValue] || '#6B6B6B',
+              fontSize: 11, fontWeight: 700, color: TIPO_COLOR[tipoSelectValue] || 'var(--muted-foreground)',
               fontFamily: 'inherit', padding: '8px 18px 8px 8px', cursor: 'pointer',
               appearance: 'none', WebkitAppearance: 'none',
               textTransform: 'uppercase', letterSpacing: '0.4px',
@@ -548,7 +509,7 @@ function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onE
               <option key={t} value={t}>{TIPO_ITEM_LABELS[t]}</option>
             ))}
           </select>
-          <span style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: '#CCCCCC', pointerEvents: 'none' }}>▾</span>
+          <span style={{ position: 'absolute', right: 5, top: '50%', transform: 'translateY(-50%)', fontSize: 8, color: 'var(--placeholder)', pointerEvents: 'none' }}>▾</span>
         </div>
       </td>
 
@@ -590,11 +551,11 @@ function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onE
         />
       </td>
 
-      {/* Precio cliente +30% — siempre auto, read-only */}
+
       <td style={td({ width: 100, textAlign: 'right', paddingRight: 8 })}>
         <span style={{
           fontSize: 13, fontWeight: 600, paddingRight: 4,
-          color: Number(row.precio_unitario) > 0 ? '#a98225' : '#DDDDDD',
+          color: Number(row.precio_unitario) > 0 ? 'var(--secco-gold)' : 'var(--inactive)',
         }}>
           {Number(row.precio_unitario) > 0 ? money(row.precio_unitario) : '—'}
         </span>
@@ -602,7 +563,7 @@ function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onE
 
       {/* Total fila */}
       <td style={td({ width: 100, textAlign: 'right', paddingRight: 10 })}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: total > 0 ? '#111114' : '#DDDDDD' }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: total > 0 ? 'var(--foreground)' : 'var(--inactive)' }}>
           {total > 0 ? money(total) : '—'}
         </span>
       </td>
@@ -612,9 +573,9 @@ function SpreadsheetRow({ row, index, isActive, onFocus, onChange, onDelete, onE
         <button
           type="button" tabIndex={-1}
           onClick={() => onDelete(row._id)}
-          style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', fontSize: 15, color: '#DDDDDD', borderRadius: 4, lineHeight: 1 }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#FF453A'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#DDDDDD'}
+          style={{ background: 'none', border: 'none', padding: '2px 4px', cursor: 'pointer', fontSize: 15, color: 'var(--inactive)', borderRadius: 4, lineHeight: 1 }}
+          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--destructive)'}
+          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--inactive)'}
         >×</button>
       </td>
     </tr>
@@ -625,10 +586,9 @@ function td(extra = {}) {
   return { padding: '2px 0', borderBottom: '1px solid #F2F2F2', verticalAlign: 'middle', ...extra }
 }
 function cellInput(extra = {}) {
-  return { width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 13, color: '#111114', fontFamily: 'inherit', padding: '8px 8px', ...extra }
+  return { width: '100%', border: 'none', background: 'transparent', outline: 'none', fontSize: 13, color: 'var(--foreground)', fontFamily: 'inherit', padding: '8px 8px', ...extra }
 }
 
-// Input que muestra "$12.500" cuando está fuera de foco y número limpio al editar
 function CurrencyInput({ value, onChange, onRowFocus, placeholder = '$0', style = {} }) {
   const [focused, setFocused] = useState(false)
   const num = Number(value) || 0
@@ -664,6 +624,7 @@ function CurrencyInput({ value, onChange, onRowFocus, placeholder = '$0', style 
 
 // ─── PresupuestoForm ──────────────────────────────────────────
 export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT, onPersistido }) {
+  const isMobile = useMobile()
   const [cotizacion, setCotizacion] = useState(cotizacionInicial)
   const cotizacionIdRef = useRef(cotizacionInicial?.id || null)
   const cotizacionSnapRef = useRef(cotizacionInicial)
@@ -780,7 +741,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       titulo,
       tipo_presupuesto: vc.tipo_presupuesto || cotizacion.tipo_presupuesto || 'final',
       descuento_tipo: descuentoTipo,
-      descuento_valor: descuento,
+      descuento_valor: toNumber(descuento),
       margen_pct: margen,
       horas_trabajo: toNumber(horasTrabajo),
       costo_hora_tecnico: toNumber(costoHoraTecnico),
@@ -806,8 +767,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       const items = itemsGuardados(rows, manoObraRows, horasTrabajoNum, Number(valorHoraClienteMo) || 0)
       await cotizacionService.actualizar(id, {
         items,
-        descuento,
-        descuento_tipo: descuentoTipo,
+        descuento: toNumber(descuento),
         notas,
         notas_internas: notasInternas,
         vista_cliente: buildVistaClientePayload(),
@@ -854,12 +814,12 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
         const vcBase = snap.vista_cliente || {}
         await cotizacionService.actualizar(id, {
           items: itemsGuardados(r, mo, htNum, vhNum),
-          descuento: nd, descuento_tipo: ndt,
+          descuento: toNumber(nd),
           notas: nn, notas_internas: nni,
           vista_cliente: {
             titulo: nt,
             descuento_tipo: ndt,
-            descuento_valor: nd,
+            descuento_valor: toNumber(nd),
             margen_pct: mg,
             horas_trabajo: toNumber(ht),
             costo_hora_tecnico: toNumber(cht),
@@ -1015,7 +975,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       const persisted = await ensurePersistida()
       await cotizacionService.actualizar(persisted.id, {
         items: itemsGuardados(rows, manoObraRows, horasTrabajoNum, Number(valorHoraClienteMo) || 0),
-        descuento, descuento_tipo: descuentoTipo,
+        descuento: toNumber(descuento),
         notas, notas_internas: notasInternas,
         vista_cliente: buildVistaClientePayload(),
         status: newStatus,
@@ -1034,7 +994,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       const persisted = await ensurePersistida()
       await cotizacionService.actualizar(persisted.id, {
         items: itemsGuardados(rows, manoObraRows, horasTrabajoNum, Number(valorHoraClienteMo) || 0),
-        descuento, descuento_tipo: descuentoTipo,
+        descuento: toNumber(descuento),
         notas, notas_internas: notasInternas,
         vista_cliente: buildVistaClientePayload(),
         status: 'enviada',
@@ -1146,14 +1106,14 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
 
   // ── Render ────────────────────────────────────────────────
   const sc = {
-    sin_asignar: { bg: '#111114', color: '#FFFFFF' },
-    asignado: { bg: 'rgba(80,100,200,0.12)', color: '#5064c8' },
-    borrador: { bg: '#F5F5F5', color: '#6B6B6B' },
-    lista: { bg: 'rgba(169,130,37,0.12)', color: '#a98225' },
-    enviada: { bg: '#a98225', color: '#FFFFFF' },
-    aprobada: { bg: 'rgba(34,139,80,0.12)', color: '#228b50' },
-    rechazada: { bg: 'rgba(255,69,58,0.10)', color: '#FF453A' },
-  }[status] || { bg: '#F5F5F5', color: '#6B6B6B' }
+    sin_asignar: { bg: 'var(--foreground)', color: 'var(--background)' },
+    asignado: { bg: 'var(--secco-gold)', color: 'var(--secco-gold)' },
+    borrador: { bg: 'var(--card)', color: 'var(--muted-foreground)' },
+    lista: { bg: 'var(--secco-gold-10)', color: 'var(--secco-gold)' },
+    enviada: { bg: 'var(--secco-gold)', color: 'var(--background)' },
+    aprobada: { bg: 'rgba(34,139,80,0.12)', color: 'var(--secco-green)' },
+    rechazada: { bg: 'var(--secco-red-08)', color: 'var(--destructive)' },
+  }[status] || { bg: 'var(--card)', color: 'var(--muted-foreground)' }
   const vehManualMerged = { ...EMPTY_VEHICULO_MANUAL, ...(cotizacion.vista_cliente?.vehiculo_manual || {}), ...vehiculoManual }
   const actaVinculadaNumero = cotizacion?.actas?.numero_acta ?? null
   const vehHeaderRaw = `${veh.marca || vehManualMerged.marca || ''} ${veh.modelo || vehManualMerged.modelo || ''}`.trim()
@@ -1164,15 +1124,15 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
   const esSoloLocal = !cotizacion?.id
 
   return (
-    <div style={{ height: '100svh', display: 'flex', flexDirection: 'column', background: '#FFFFFF', overflow: 'hidden' }}>
+    <div style={{ height: '100svh', display: 'flex', flexDirection: 'column', background: 'var(--background)', overflow: 'hidden' }}>
 
       {/* ── Header ─────────────────────────────────────────── */}
-      <div style={{ borderBottom: '1px solid #E0E0E0', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 10, height: 52, flexShrink: 0 }}>
+      <div style={{ borderBottom: '1px solid var(--border)', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 10, height: 52, flexShrink: 0 }}>
         <button type="button" onClick={onVolver}
-          style={{ background: '#F5F5F5', border: '1px solid #E0E0E0', color: '#111114', borderRadius: 8, width: 32, height: 32, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>←</button>
+          style={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--foreground)', borderRadius: 8, width: 32, height: 32, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>←</button>
         <img src="/logo-secco.png" alt="SECCO" style={{ height: 24, objectFit: 'contain', flexShrink: 0 }} onError={(e) => { e.target.style.display = 'none' }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#111114', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {vehHeader} ·{' '}
             {isPatenteAbrible(patenteHeader) ? (
               <PatenteLink patente={patenteHeader} mono />
@@ -1180,7 +1140,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               <span style={{ fontFamily: 'monospace', letterSpacing: '1px' }}>{patenteHeader}</span>
             )}
           </p>
-          <p style={{ margin: 0, fontSize: 11, color: '#6B6B6B' }}>{cli.nombre || (esSoloLocal ? 'Completá datos en el presupuesto o vinculá un acta después' : '')}</p>
+          <p style={{ margin: 0, fontSize: 11, color: 'var(--muted-foreground)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cli.nombre || (esSoloLocal ? 'Completa datos en el presupuesto o vinculá un acta después' : '')}</p>
         </div>
         {esSoloLocal && (
           <button
@@ -1194,9 +1154,9 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               fontWeight: 700,
               fontFamily: 'inherit',
               borderRadius: 8,
-              border: '1px solid rgba(169,130,37,0.45)',
-              background: 'rgba(169,130,37,0.12)',
-              color: '#8a6a1a',
+              border: '1px solid var(--secco-gold-30)',
+              background: 'var(--secco-gold-10)',
+              color: 'var(--secco-gold-dark)',
               cursor: loading ? 'default' : 'pointer',
               opacity: loading ? 0.7 : 1,
             }}
@@ -1204,7 +1164,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
             {loading ? '…' : 'Guardar borrador'}
           </button>
         )}
-        <span style={{ fontSize: 11, flexShrink: 0, color: saveStatus === 'saved' ? '#a98225' : saveStatus === 'saving' ? '#AAAAAA' : saveStatus === 'error' ? '#FF453A' : saveStatus === 'local' ? '#6B6B6B' : '#AAAAAA' }}>
+        <span style={{ fontSize: 11, flexShrink: 0, color: saveStatus === 'saved' ? 'var(--secco-gold)' : saveStatus === 'saving' ? 'var(--placeholder)' : saveStatus === 'error' ? 'var(--destructive)' : saveStatus === 'local' ? 'var(--muted-foreground)' : 'var(--placeholder)' }}>
           {esSoloLocal
             ? (saveStatus === 'saving' ? 'Subiendo…' : saveStatus === 'error' ? '⚠ Error' : saveStatus === 'saved' ? '✓ En servidor' : 'Solo local')
             : (saveStatus === 'saved' ? '✓ Guardado' : saveStatus === 'saving' ? 'Guardando…' : saveStatus === 'error' ? '⚠ Error' : '●')}
@@ -1214,7 +1174,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
         </span>
         {!isWide && (
           <button type="button" onClick={() => setShowDiag((v) => !v)}
-            style={{ background: showDiag ? 'rgba(169,130,37,0.12)' : '#F5F5F5', border: '1px solid #E0E0E0', color: showDiag ? '#a98225' : '#6B6B6B', borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+            style={{ background: showDiag ? 'var(--secco-gold-10)' : 'var(--card)', border: '1px solid var(--border)', color: showDiag ? 'var(--secco-gold)' : 'var(--muted-foreground)', borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
             {showDiag ? 'Presupuesto' : 'Diagnóstico'}
           </button>
         )}
@@ -1224,7 +1184,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', flexDirection: isWide ? 'row' : 'column' }}>
 
         {/* ── Panel izquierdo: Spreadsheet ─────────────────── */}
-        <div style={{ flex: 1, display: isWide || !showDiag ? 'flex' : 'none', flexDirection: 'column', overflow: 'hidden', borderRight: isWide ? '1px solid #E0E0E0' : 'none' }}>
+        <div style={{ flex: 1, display: isWide || !showDiag ? 'flex' : 'none', flexDirection: 'column', overflow: 'hidden', borderRight: isWide ? '1px solid var(--border)' : 'none' }}>
 
           {/* Título */}
           <div style={{ padding: '10px 16px 0', borderBottom: '1px solid #F2F2F2', flexShrink: 0 }}>
@@ -1232,15 +1192,15 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               type="text" value={titulo}
               onChange={(e) => { setTitulo(e.target.value); touch(null, null, null, null, null, null, e.target.value) }}
               placeholder="Título de la propuesta (opcional)"
-              style={{ width: '100%', border: 'none', outline: 'none', fontSize: 14, fontWeight: 600, color: '#111114', fontFamily: 'inherit', padding: '7px 0', background: 'transparent' }}
+              style={{ width: '100%', border: 'none', outline: 'none', fontSize: 14, fontWeight: 600, color: 'var(--foreground)', fontFamily: 'inherit', padding: '7px 0', background: 'transparent' }}
             />
           </div>
 
           {/* Tabla */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 660 }}>
               <thead>
-                <tr style={{ background: '#FAFAFA', borderBottom: '1.5px solid #E0E0E0' }}>
+                <tr style={{ background: 'var(--card)', borderBottom: '1.5px solid #E0E0E0' }}>
                   <th style={th({ width: 28 })}>#</th>
                   <th style={th({ width: 110, textAlign: 'left', paddingLeft: 8 })}>Concepto</th>
                   <th style={th({ textAlign: 'left', paddingLeft: 8 })}>Descripción</th>
@@ -1270,15 +1230,15 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
 
             {/* Botón agregar fila */}
             <button type="button" onClick={addRow}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '4px 0 0 28px', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, color: '#AAAAAA', borderRadius: 6 }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#a98225'; e.currentTarget.style.background = 'rgba(169,130,37,0.06)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#AAAAAA'; e.currentTarget.style.background = 'none' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '4px 0 0 28px', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, color: 'var(--placeholder)', borderRadius: 6 }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--secco-gold)'; e.currentTarget.style.background = 'var(--secco-gold-10)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--placeholder)'; e.currentTarget.style.background = 'none' }}>
               <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Agregar ítem
             </button>
 
             {/* ── Mano de obra (una o más filas) ─────────────── */}
             <div style={{ margin: '8px 0 0', borderTop: '1.5px dashed #E0E0E0' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 660 }}>
                 <tbody>
                   {manoObraRows.map((mo, moIdx) => {
                     const precioNeta = Number(mo.precio) || 0
@@ -1287,11 +1247,11 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                     const showCostoSecco = moIdx === 0 && totales.costo_mo_real > 0
                     return (
                       <tr key={mo._id} style={{ background: '#F8F6FF' }}>
-                        <td style={td({ width: 28, textAlign: 'center', color: '#AAAAAA', fontSize: 10, fontWeight: 700 })}>
+                        <td style={td({ width: 28, textAlign: 'center', color: 'var(--placeholder)', fontSize: 10, fontWeight: 700 })}>
                           {`M.${moIdx + 1}`}
                         </td>
                         <td style={td({ width: 110 })}>
-                          <span style={{ display: 'block', padding: '8px 8px', fontSize: 11, fontWeight: 700, color: '#5064c8', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                          <span style={{ display: 'block', padding: '8px 8px', fontSize: 11, fontWeight: 700, color: 'var(--secco-gold)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                             M. de obra
                           </span>
                         </td>
@@ -1305,12 +1265,12 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                             autoComplete="off"
                             spellCheck="true"
                             aria-label={`Descripción mano de obra ${moIdx + 1}`}
-                            style={cellInput({ color: '#111114' })}
+                            style={cellInput({ color: 'var(--foreground)' })}
                           />
                         </td>
-                        <td style={td({ width: 52, textAlign: 'center', color: '#AAAAAA', fontSize: 12 })}>1</td>
+                        <td style={td({ width: 52, textAlign: 'center', color: 'var(--placeholder)', fontSize: 12 })}>1</td>
                         <td style={td({ width: 100 })}>
-                          <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: showCostoSecco ? '#5064c8' : '#DDDDDD', textAlign: 'right', fontWeight: 600 }}>
+                          <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: showCostoSecco ? 'var(--secco-gold)' : 'var(--inactive)', textAlign: 'right', fontWeight: 600 }}>
                             {showCostoSecco ? money(totales.costo_mo_real) : '—'}
                           </span>
                         </td>
@@ -1328,20 +1288,20 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                                   return next
                                 })
                               }}
-                              style={{ color: '#5064c8', fontWeight: 600, textAlign: 'right' }}
+                              style={{ color: 'var(--secco-gold)', fontWeight: 600, textAlign: 'right' }}
                             />
                           ) : horasModeMo && moIdx > 0 ? (
-                            <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: '#CCCCCC', textAlign: 'right' }}>—</span>
+                            <span style={{ display: 'block', padding: '8px 8px', fontSize: 12, color: 'var(--placeholder)', textAlign: 'right' }}>—</span>
                           ) : (
                             <CurrencyInput
                               value={mo.precio}
                               onChange={(val) => updateManoObraRow(mo._id, 'precio', val)}
-                              style={{ color: '#5064c8', fontWeight: 600, textAlign: 'right' }}
+                              style={{ color: 'var(--secco-gold)', fontWeight: 600, textAlign: 'right' }}
                             />
                           )}
                         </td>
                         <td style={td({ width: 100, textAlign: 'right', paddingRight: 10 })}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: (horasModeMo && moIdx === 0 && ventaMoCalculada > 0) || (!horasModeMo && precioNeta > 0) ? '#5064c8' : '#DDDDDD' }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: (horasModeMo && moIdx === 0 && ventaMoCalculada > 0) || (!horasModeMo && precioNeta > 0) ? 'var(--secco-gold)' : 'var(--inactive)' }}>
                             {horasModeMo && moIdx === 0 && ventaMoCalculada > 0
                               ? money(totales.mo_con_iva)
                               : !horasModeMo && precioNeta > 0
@@ -1359,10 +1319,10 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                             style={{
                               background: 'none', border: 'none', padding: '2px 4px',
                               cursor: manoObraRows.length <= 1 ? 'default' : 'pointer',
-                              fontSize: 15, color: manoObraRows.length <= 1 ? '#EEEEEE' : '#DDDDDD', borderRadius: 4, lineHeight: 1,
+                              fontSize: 15, color: manoObraRows.length <= 1 ? 'var(--inactive)' : 'var(--inactive)', borderRadius: 4, lineHeight: 1,
                             }}
-                            onMouseEnter={(e) => { if (manoObraRows.length > 1) e.currentTarget.style.color = '#FF453A' }}
-                            onMouseLeave={(e) => { e.currentTarget.style.color = manoObraRows.length <= 1 ? '#EEEEEE' : '#DDDDDD' }}
+                            onMouseEnter={(e) => { if (manoObraRows.length > 1) e.currentTarget.style.color = 'var(--destructive)' }}
+                            onMouseLeave={(e) => { e.currentTarget.style.color = manoObraRows.length <= 1 ? 'var(--inactive)' : 'var(--inactive)' }}
                           >
                             ×
                           </button>
@@ -1380,22 +1340,21 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6, margin: '4px 0 0 28px', padding: '7px 12px',
                   background: 'none', border: 'none', cursor: horasModeMo ? 'not-allowed' : 'pointer',
-                  fontFamily: 'inherit', fontSize: 13, color: horasModeMo ? '#DDDDDD' : '#AAAAAA', borderRadius: 6,
+                  fontFamily: 'inherit', fontSize: 13, color: horasModeMo ? 'var(--inactive)' : 'var(--placeholder)', borderRadius: 6,
                 }}
-                onMouseEnter={(e) => { if (!horasModeMo) { e.currentTarget.style.color = '#5064c8'; e.currentTarget.style.background = 'rgba(80,100,200,0.06)' } }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = horasModeMo ? '#DDDDDD' : '#AAAAAA'; e.currentTarget.style.background = 'none' }}
+                onMouseEnter={(e) => { if (!horasModeMo) { e.currentTarget.style.color = 'var(--secco-gold)'; e.currentTarget.style.background = 'var(--secco-gold)' } }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = horasModeMo ? 'var(--inactive)' : 'var(--placeholder)'; e.currentTarget.style.background = 'none' }}
               >
                 <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Agregar mano de obra
               </button>
             </div>
           </div>
 
-          {/* Separador: arrastrar para dar más alto a ítems o a márgenes/resumen */}
           <div
             role="separator"
             aria-orientation="horizontal"
             aria-label="Redimensionar panel de márgenes y totales"
-            title="Arrastrá para ajustar el alto del panel inferior (doble clic restaura altura por defecto)"
+            title="Arrastra para ajustar el alto del panel inferior (doble clic restaura altura por defecto)"
             onPointerDown={startResizePanelTotales}
             onDoubleClick={() => {
               setAlturaPanelTotales(PRESUPUESTO_TOTALE_DEFAULT)
@@ -1418,9 +1377,9 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               gap: 3,
             }}
           >
-            <span style={{ width: 28, height: 3, borderRadius: 2, background: '#b0b0b0', display: 'block' }} aria-hidden />
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#888888', letterSpacing: '0.5px' }}>⋮⋮</span>
-            <span style={{ width: 28, height: 3, borderRadius: 2, background: '#b0b0b0', display: 'block' }} aria-hidden />
+            <span style={{ width: 28, height: 3, borderRadius: 2, background: 'var(--placeholder)', display: 'block' }} aria-hidden />
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', letterSpacing: '0.5px' }}>⋮⋮</span>
+            <span style={{ width: 28, height: 3, borderRadius: 2, background: 'var(--placeholder)', display: 'block' }} aria-hidden />
           </div>
 
           {/* ── Totales ──────────────────────────────────────── */}
@@ -1440,25 +1399,25 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
 
             {/* Margen de repuestos */}
             <div style={{ padding: '8px 16px', borderBottom: '1px solid #F2F2F2', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 12, color: '#6B6B6B', flex: 1 }}>Margen repuestos</span>
+              <span style={{ fontSize: 12, color: 'var(--muted-foreground)', flex: 1 }}>Margen repuestos</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <input
                   type="number" min="0" max="999"
                   value={margen}
                   onChange={(e) => handleMargenChange(e.target.value)}
-                  style={{ width: 64, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '4px 8px', textAlign: 'right', fontFamily: 'inherit', outline: 'none', color: '#111114', background: '#FFFFFF' }}
+                  style={{ width: 64, fontSize: 12, border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', textAlign: 'right', fontFamily: 'inherit', outline: 'none', color: 'var(--foreground)', background: 'var(--background)' }}
                 />
-                <span style={{ fontSize: 12, color: '#6B6B6B' }}>%</span>
+                <span style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>%</span>
               </div>
             </div>
 
             {/* Descuento */}
             <div style={{ padding: '10px 16px', borderBottom: '1px solid #F2F2F2', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 12, color: '#6B6B6B', flex: 1 }}>Descuento</span>
+              <span style={{ fontSize: 12, color: 'var(--muted-foreground)', flex: 1 }}>Descuento</span>
               <select
                 value={descuentoTipo}
-                onChange={(e) => { setDescuentoTipo(e.target.value); touch(null, null, null, e.target.value, null, null, null) }}
-                style={{ fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '4px 6px', fontFamily: 'inherit', color: '#111114', cursor: 'pointer', background: '#FFFFFF' }}
+                onChange={(e) => { setDescuentoTipo(e.target.value); setDescuento(0); touch(null, null, 0, e.target.value, null, null, null) }}
+                style={{ fontSize: 12, border: '1px solid var(--border)', borderRadius: 6, padding: '4px 6px', fontFamily: 'inherit', color: 'var(--foreground)', cursor: 'pointer', background: 'var(--background)' }}
               >
                 <option value="monto">$</option>
                 <option value="porcentaje">%</option>
@@ -1467,42 +1426,43 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                 <CurrencyInput
                   value={descuento}
                   onChange={(val) => { setDescuento(val); touch(null, null, val, null, null, null, null) }}
-                  style={{ width: 90, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '4px 8px', background: '#FFFFFF' }}
+                  style={{ width: 90, fontSize: 12, border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', background: 'var(--background)' }}
                 />
               ) : (
                 <input
                   type="number" min="0" max="100"
                   value={descuento}
                   onChange={(e) => { setDescuento(e.target.value); touch(null, null, e.target.value, null, null, null, null) }}
+                  onFocus={(e) => e.target.select()}
                   placeholder="0"
-                  style={{ width: 90, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '4px 8px', textAlign: 'right', fontFamily: 'inherit', outline: 'none', color: '#111114' }}
+                  style={{ width: 90, fontSize: 12, border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', textAlign: 'right', fontFamily: 'inherit', outline: 'none', color: 'var(--foreground)' }}
                 />
               )}
             </div>
 
             {/* Mano de obra real */}
             <div style={{ padding: '10px 16px', borderBottom: '1px solid #F2F2F2', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: '#6B6B6B', minWidth: 120 }}>Mano de obra real</span>
+              <span style={{ fontSize: 12, color: 'var(--muted-foreground)', minWidth: 120 }}>Mano de obra real</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: '#6B6B6B' }}>Horas</span>
+                <span style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>Horas</span>
                 <input
                   type="number" min="0" step="0.5"
                   value={horasTrabajo}
                   onChange={(e) => { setHorasTrabajo(e.target.value); touch(null, null, null, null, null, null, null, null, e.target.value, null) }}
-                  style={{ width: 78, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '4px 8px', textAlign: 'right', fontFamily: 'inherit', outline: 'none', color: '#111114', background: '#FFFFFF' }}
+                  style={{ width: 78, fontSize: 12, border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', textAlign: 'right', fontFamily: 'inherit', outline: 'none', color: 'var(--foreground)', background: 'var(--background)' }}
                 />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: '#6B6B6B' }}>Costo hora</span>
+                <span style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>Costo hora</span>
                 <CurrencyInput
                   value={costoHoraTecnico}
                   onChange={(val) => { setCostoHoraTecnico(val); touch(null, null, null, null, null, null, null, null, null, val) }}
-                  style={{ width: 96, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '4px 8px', background: '#FFFFFF' }}
+                  style={{ width: 96, fontSize: 12, border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', background: 'var(--background)' }}
                 />
               </div>
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: '#6B6B6B' }}>Costo M.O. real</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#5064c8' }}>{money(totales.costo_mo_real)}</span>
+                <span style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>Costo M.O. real</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--secco-gold)' }}>{money(totales.costo_mo_real)}</span>
               </div>
             </div>
 
@@ -1572,14 +1532,14 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                     const esNegativo = typeof value === 'number' && value < 0
                     const esSuma = op === 'add'
                     const esResta = op === 'subtract' || esNegativo
-                    const colorOperacion = esResta ? '#FF453A' : esSuma ? '#228b50' : '#6B6B6B'
+                    const colorOperacion = esResta ? 'var(--destructive)' : esSuma ? 'var(--secco-green)' : 'var(--muted-foreground)'
                     return (
                       <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4 }}>
                         <span style={{ fontSize: 11, color: colorOperacion }}>{label}</span>
                         <span style={{
                           fontSize: esFinal ? 13 : 11,
                           fontWeight: esFinal ? 700 : 500,
-                          color: esFinal ? '#a98225' : esResta ? '#FF453A' : esSuma ? '#228b50' : esUtilidad && Number(value) < 0 ? '#FF453A' : '#111114',
+                          color: esFinal ? 'var(--secco-gold)' : esResta ? 'var(--destructive)' : esSuma ? 'var(--secco-green)' : esUtilidad && Number(value) < 0 ? 'var(--destructive)' : 'var(--foreground)',
                           whiteSpace: 'nowrap',
                         }}>
                           {esTexto ? value : esNegativo ? `-${money(-value)}` : money(value)}
@@ -1596,11 +1556,11 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               <textarea rows={1} value={notas}
                 onChange={(e) => { setNotas(e.target.value); touch(null, null, null, null, e.target.value, null, null) }}
                 placeholder="Nota para el cliente..."
-                style={{ flex: 1, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '6px 8px', fontFamily: 'inherit', outline: 'none', resize: 'none', color: '#111114' }} />
+                style={{ flex: 1, fontSize: 12, border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', fontFamily: 'inherit', outline: 'none', resize: 'none', color: 'var(--foreground)' }} />
               <textarea rows={1} value={notasInternas}
                 onChange={(e) => { setNotasInternas(e.target.value); touch(null, null, null, null, null, e.target.value, null) }}
                 placeholder="Nota interna..."
-                style={{ flex: 1, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '6px 8px', fontFamily: 'inherit', outline: 'none', resize: 'none', color: '#111114' }} />
+                style={{ flex: 1, fontSize: 12, border: '1px solid var(--border)', borderRadius: 6, padding: '6px 8px', fontFamily: 'inherit', outline: 'none', resize: 'none', color: 'var(--foreground)' }} />
             </div>
           </div>
 
@@ -1611,22 +1571,22 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
             display: 'flex',
             gap: 8,
             flexWrap: 'wrap',
-            background: '#FFFFFF',
-            borderTop: '1px solid #E0E0E0',
+            background: 'var(--background)',
+            borderTop: '1px solid var(--border)',
             boxShadow: '0 -2px 6px rgba(0,0,0,0.04)',
           }}>
             {status === 'sin_asignar' && (
-              <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(17,17,20,0.04)', border: '1px solid #E0E0E0', borderRadius: 8 }}>
-                <p style={{ margin: 0, fontSize: 12, color: '#6B6B6B', fontWeight: 600 }}>
+              <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(17,17,20,0.04)', border: '1px solid var(--border)', borderRadius: 8 }}>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--muted-foreground)', fontWeight: 600 }}>
                   Presupuesto sin asignar: puedes editarlo, exportar PDF y enviarlo. Para aprobarlo y generar OT debe asociarse a un acta/vehículo.
                 </p>
               </div>
             )}
             {status !== 'rechazada' && status !== 'aprobada' && [
-              { label: 'PDF cliente',  fn: () => handlePDF('cliente'),    s: { bg: '#FFF', color: '#111114', border: '1px solid #E0E0E0' } },
-              { label: 'PDF interno',  fn: () => handlePDF('interno'),    s: { bg: '#FFF', color: '#6B6B6B', border: '1px solid #E0E0E0' } },
-              { label: 'Marcar lista', fn: () => handleAction('lista'),   s: { bg: 'rgba(169,130,37,0.10)', color: '#a98225', border: '1px solid rgba(169,130,37,0.3)' } },
-              { label: loading ? '…' : 'Enviar →', fn: () => handleAction('enviada'), s: { bg: '#a98225', color: '#FFF', border: 'none' } },
+              { label: 'PDF cliente',  fn: () => handlePDF('cliente'),    s: { bg: '#FFF', color: 'var(--foreground)', border: '1px solid var(--border)' } },
+              { label: 'PDF interno',  fn: () => handlePDF('interno'),    s: { bg: '#FFF', color: 'var(--muted-foreground)', border: '1px solid var(--border)' } },
+              { label: 'Marcar lista', fn: () => handleAction('lista'),   s: { bg: 'var(--secco-gold-10)', color: 'var(--secco-gold)', border: '1px solid var(--secco-gold-30)' } },
+              { label: loading ? '…' : 'Enviar →', fn: () => handleAction('enviada'), s: { bg: 'var(--secco-gold)', color: '#FFF', border: 'none' } },
             ].map(({ label, fn, s }) => (
               <button key={label} type="button" onClick={fn} disabled={loading}
                 style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: s.bg, color: s.color, border: s.border, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -1636,22 +1596,22 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
 
             {/* Respuesta del cliente — visible cuando está enviada */}
             {status === 'enviada' && !tieneAsignacion && (
-              <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(169,130,37,0.06)', border: '1px solid rgba(169,130,37,0.22)', borderRadius: 8 }}>
-                <p style={{ margin: 0, fontSize: 12, color: '#a98225', fontWeight: 600 }}>
+              <div style={{ width: '100%', padding: '8px 12px', background: 'var(--secco-gold-10)', border: '1px solid rgba(169,130,37,0.22)', borderRadius: 8 }}>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--secco-gold)', fontWeight: 600 }}>
                   Presupuesto enviado sin asignar: sigue disponible para asociarlo a un acta/vehículo. La aprobación queda habilitada después de asignarlo.
                 </p>
               </div>
             )}
             {status === 'enviada' && tieneAsignacion && (
               <>
-                <div style={{ width: '100%', height: 1, background: '#F2F2F2', margin: '4px 0' }} />
-                <span style={{ fontSize: 11, color: '#6B6B6B', alignSelf: 'center', flex: 1 }}>Respuesta del cliente:</span>
+                <div style={{ width: '100%', height: 1, background: 'var(--card)', margin: '4px 0' }} />
+                <span style={{ fontSize: 11, color: 'var(--muted-foreground)', alignSelf: 'center', flex: 1 }}>Respuesta del cliente:</span>
                 <button type="button" onClick={handleAprobar} disabled={loading}
-                  style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: '#228b50', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: 'var(--secco-green)', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
                   {loading ? '…' : '✓ Aprobado'}
                 </button>
                 <button type="button" onClick={() => setShowRechazo((v) => !v)} disabled={loading}
-                  style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: showRechazo ? 'rgba(255,69,58,0.12)' : '#FFF', color: '#FF453A', border: '1px solid rgba(255,69,58,0.35)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: showRechazo ? 'rgba(255,69,58,0.12)' : '#FFF', color: 'var(--destructive)', border: '1px solid var(--secco-red-35)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
                   ✗ Rechazado
                 </button>
                 {showRechazo && (
@@ -1661,11 +1621,11 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                       value={motivoRechazo}
                       onChange={(e) => setMotivoRechazo(e.target.value)}
                       placeholder="Motivo del rechazo..."
-                      style={{ flex: 1, fontSize: 12, border: '1px solid #E0E0E0', borderRadius: 6, padding: '6px 10px', fontFamily: 'inherit', outline: 'none', color: '#111114' }}
+                      style={{ flex: 1, fontSize: 12, border: '1px solid var(--border)', borderRadius: 6, padding: '6px 10px', fontFamily: 'inherit', outline: 'none', color: 'var(--foreground)' }}
                       onKeyDown={(e) => e.key === 'Enter' && handleRechazar()}
                     />
                     <button type="button" onClick={handleRechazar} disabled={loading}
-                      style={{ padding: '6px 14px', fontSize: 12, fontWeight: 700, background: '#FF453A', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      style={{ padding: '6px 14px', fontSize: 12, fontWeight: 700, background: 'var(--destructive)', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
                       Confirmar
                     </button>
                   </div>
@@ -1677,16 +1637,16 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
             {status === 'aprobada' && (
               <>
                 <button type="button" onClick={() => handlePDF('cliente')} disabled={loading}
-                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#111114', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
                   PDF cliente
                 </button>
                 <button type="button" onClick={() => handlePDF('interno')} disabled={loading}
-                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#6B6B6B', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: 'var(--muted-foreground)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
                   PDF interno
                 </button>
                 {onAbrirOT && (
                   <button type="button" onClick={handleAprobar} disabled={loading}
-                    style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: '#228b50', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    style={{ padding: '7px 16px', fontSize: 12, fontWeight: 700, background: 'var(--secco-green)', color: '#FFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
                     Ver OT →
                   </button>
                 )}
@@ -1696,15 +1656,15 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
             {/* Estado final: rechazado */}
             {status === 'rechazada' && (
               <>
-                <div style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,69,58,0.06)', border: '1px solid rgba(255,69,58,0.2)', borderRadius: 8 }}>
-                  <p style={{ margin: 0, fontSize: 12, color: '#FF453A', fontWeight: 600 }}>Cotización rechazada</p>
+                <div style={{ width: '100%', padding: '8px 12px', background: 'var(--secco-red-08)', border: '1px solid rgba(255,69,58,0.2)', borderRadius: 8 }}>
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--destructive)', fontWeight: 600 }}>Cotización rechazada</p>
                 </div>
                 <button type="button" onClick={() => handlePDF('cliente')} disabled={loading}
-                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#111114', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: 'var(--foreground)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
                   PDF cliente
                 </button>
                 <button type="button" onClick={() => handlePDF('interno')} disabled={loading}
-                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: '#6B6B6B', border: '1px solid #E0E0E0', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ padding: '7px 14px', fontSize: 12, fontWeight: 600, background: '#FFF', color: 'var(--muted-foreground)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}>
                   PDF interno
                 </button>
               </>
@@ -1716,10 +1676,10 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
         <div style={{
           width: isWide ? '38%' : '100%', maxWidth: isWide ? 440 : undefined,
           flexShrink: 0, display: isWide || showDiag ? 'flex' : 'none',
-          flexDirection: 'column', overflow: 'hidden', background: '#FAFAFA',
+          flexDirection: 'column', overflow: 'hidden', background: 'var(--card)',
         }}>
-          <div style={{ padding: '11px 20px', borderBottom: '1px solid #E0E0E0', flexShrink: 0, background: '#FFFFFF' }}>
-            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+          <div style={{ padding: '11px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--background)' }}>
+            <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               {cotizacion?.diagnosticos ? 'Diagnóstico' : 'Contexto'}
             </p>
           </div>
@@ -1734,14 +1694,14 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
               }}
               onError={(msg) => alert(msg)}
             />
-            <div style={{ padding: '14px 18px', borderBottom: '1px solid #E0E0E0', background: '#FFFFFF' }}>
-              <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: '#111114' }}>Cliente y vehículo</p>
-              <p style={{ margin: '0 0 12px', fontSize: 11, color: '#6B6B6B', lineHeight: 1.45 }}>
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', background: 'var(--background)' }}>
+              <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: 'var(--foreground)' }}>Cliente y vehículo</p>
+              <p style={{ margin: '0 0 12px', fontSize: 11, color: 'var(--muted-foreground)', lineHeight: 1.45 }}>
                 Contacto y datos del auto para el PDF al cliente y el encabezado. Si la cotización viene de un acta, suelen venir cargados.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px 12px' }}>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: '1 / -1' }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Nombre</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Nombre</span>
                   <input
                     type="text"
                     className="s-input"
@@ -1753,7 +1713,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Teléfono</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Teléfono</span>
                   <input
                     type="tel"
                     className="s-input"
@@ -1765,7 +1725,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Correo</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Correo</span>
                   <input
                     type="email"
                     className="s-input"
@@ -1777,7 +1737,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Marca</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Marca</span>
                   <input
                     type="text"
                     className="s-input"
@@ -1788,7 +1748,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Modelo</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Modelo</span>
                   <input
                     type="text"
                     className="s-input"
@@ -1799,7 +1759,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Patente</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Patente</span>
                   <input
                     type="text"
                     className="s-input"
@@ -1811,7 +1771,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                   />
                 </label>
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#6B6B6B', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Año</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Año</span>
                   <input
                     type="text"
                     inputMode="numeric"
@@ -1833,5 +1793,5 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
 }
 
 function th(extra = {}) {
-  return { padding: '7px 2px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: '#AAAAAA', textAlign: 'center', ...extra }
+  return { padding: '7px 2px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--placeholder)', textAlign: 'center', ...extra }
 }

@@ -3,6 +3,7 @@ import { unwrapApiList } from '../../lib/unwrapApiList'
 import { actaEntregaService } from '../../services/actaEntregaService'
 import { useToast } from '../../components/common/ToastProvider'
 import PatenteLink from '../../components/vehiculo/PatenteLink'
+import { useMobile } from '../../hooks/useMobile'
 
 const LIMITE_LISTA = 50
 
@@ -23,8 +24,8 @@ function actaStatusKey(status) {
 
 function statusStyle(status) {
   const s = actaStatusKey(status)
-  if (s === 'cerrada') return { background: 'rgba(52,199,89,0.12)', color: '#1a7a34', border: '1px solid rgba(52,199,89,0.3)' }
-  return { background: 'rgba(107,107,107,0.10)', color: '#6B6B6B', border: '1px solid #E0E0E0' }
+  if (s === 'cerrada') return { background: 'var(--secco-green-12)', color: 'var(--secco-green-dark)', border: '1px solid var(--secco-green-30)' }
+  return { background: 'var(--secco-muted-10)', color: 'var(--muted-foreground)', border: '1px solid var(--border)' }
 }
 
 function numeroActa(acta) {
@@ -37,6 +38,7 @@ function fechaEntrega(acta) {
 
 export default function ActasEntregaListScreen({ onNavigate }) {
   const toast = useToast()
+  const isMobile = useMobile()
   const [actas, setActas] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
@@ -84,7 +86,7 @@ export default function ActasEntregaListScreen({ onNavigate }) {
   }, [actas, statusFiltro])
 
   return (
-    <div style={{ padding: '14px 12px 40px' }}>
+    <div style={{ padding: isMobile ? '10px 8px 40px' : '14px 12px 40px' }}>
       <style>{`
         .ent-toolbar { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; }
         .ent-tools { display: grid; grid-template-columns: 1fr 170px; gap: 10px; margin-bottom: 14px; }
@@ -97,18 +99,18 @@ export default function ActasEntregaListScreen({ onNavigate }) {
 
       <div className="ent-toolbar">
         <div style={{ minWidth: 0 }}>
-          <h2 style={{ color: '#111114', fontSize: 20, fontWeight: 800, margin: 0 }}>Actas de entrega</h2>
-          <p style={{ margin: '4px 0 0', color: '#6B6B6B', fontSize: 12, lineHeight: 1.45 }}>
+          <h2 style={{ color: 'var(--foreground)', fontSize: 20, fontWeight: 800, margin: 0 }}>Actas de entrega</h2>
+          <p style={{ margin: '4px 0 0', color: 'var(--muted-foreground)', fontSize: 12, lineHeight: 1.45 }}>
             Entrega del vehículo al cliente una vez finalizado el trabajo.
           </p>
-          <p style={{ margin: '6px 0 0', color: '#111114', fontSize: 12, fontWeight: 600 }}>
+          <p style={{ margin: '6px 0 0', color: 'var(--foreground)', fontSize: 12, fontWeight: 600 }}>
             {loading ? 'Cargando…' : `${filtradas.length} resultado${filtradas.length === 1 ? '' : 's'}`}
           </p>
         </div>
         <button
           type="button"
           className="s-btn-primary"
-          style={{ width: 'auto', padding: '9px 14px', fontSize: 13, height: 40, background: '#1a7a34', borderColor: '#1a7a34' }}
+          style={{ width: 'auto', padding: '9px 14px', fontSize: 13, height: 40, background: 'var(--secco-green-dark)', borderColor: 'var(--secco-green-dark)' }}
           onClick={() => { toast.info('Nueva acta de entrega…'); onNavigate('actas-entrega/nueva') }}
         >
           + Nueva entrega
@@ -138,7 +140,7 @@ export default function ActasEntregaListScreen({ onNavigate }) {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px 0' }}>
-          <p style={{ color: '#6B6B6B', fontSize: 14 }}>Cargando actas de entrega…</p>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Cargando actas de entrega…</p>
         </div>
       ) : (
         <div className="ent-grid">
@@ -164,7 +166,7 @@ export default function ActasEntregaListScreen({ onNavigate }) {
                   cursor: 'pointer',
                   border: '1.5px solid #E0E0E0',
                   borderRadius: 14,
-                  background: '#FFFFFF',
+                  background: 'var(--background)',
                   fontFamily: 'inherit',
                   width: '100%',
                   boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
@@ -172,16 +174,16 @@ export default function ActasEntregaListScreen({ onNavigate }) {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                   <div style={{ minWidth: 0 }}>
-                    <p style={{ margin: '0 0 2px', color: '#1a7a34', fontSize: 15, fontWeight: 700 }}>
+                    <p style={{ margin: '0 0 2px', color: 'var(--secco-green-dark)', fontSize: 15, fontWeight: 700 }}>
                       {num ? `ENT-${num}` : 'Entrega'}
                       {acta.vehiculos?.patente ? (
                         <> — <PatenteLink patente={acta.vehiculos.patente} mono stopPropagation /></>
                       ) : null}
                     </p>
-                    <p style={{ margin: '0 0 2px', color: '#111114', fontSize: 13, fontWeight: 500 }}>
+                    <p style={{ margin: '0 0 2px', color: 'var(--foreground)', fontSize: 13, fontWeight: 500 }}>
                       {acta.clientes?.nombre}
                     </p>
-                    <p style={{ margin: 0, color: '#6B6B6B', fontSize: 12 }}>
+                    <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 12 }}>
                       {acta.vehiculos?.marca} {acta.vehiculos?.modelo}
                     </p>
                   </div>
@@ -192,7 +194,7 @@ export default function ActasEntregaListScreen({ onNavigate }) {
                 {(fecha || esBorrador) ? (
                   <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                     {fecha ? (
-                      <p style={{ margin: 0, color: '#6B6B6B', fontSize: 11 }}>
+                      <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 11 }}>
                         Entrega: {new Date(fecha).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' })}
                       </p>
                     ) : (
@@ -218,7 +220,7 @@ export default function ActasEntregaListScreen({ onNavigate }) {
           })}
           {!filtradas.length && (
             <div style={{ textAlign: 'center', padding: '48px 0', gridColumn: '1 / -1' }}>
-              <p style={{ color: '#6B6B6B', fontSize: 14 }}>Sin resultados</p>
+              <p style={{ color: 'var(--muted-foreground)', fontSize: 14 }}>Sin resultados</p>
             </div>
           )}
         </div>

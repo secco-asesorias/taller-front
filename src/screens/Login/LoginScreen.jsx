@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { supabase } from '../../services/api'
+import { useMobile } from '../../hooks/useMobile'
 
 export default function LoginScreen() {
+  const isMobile = useMobile()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -14,7 +16,6 @@ export default function LoginScreen() {
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
       if (authError) throw authError
-      // Auth state listener in AuthContext will automatically pick up the session
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión')
     } finally {
@@ -23,27 +24,27 @@ export default function LoginScreen() {
   }
 
   return (
-    <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#ffffff', padding: '24px 16px' }}>
+    <div style={{ minHeight: '100svh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--background)', padding: isMobile ? '16px 12px' : '24px 16px' }}>
       <div style={{ width: '100%', maxWidth: 380 }}>
         {/* Logo */}
         <div style={{ position: 'absolute', top: 24, left: 0, right: 0, textAlign: 'center' }}>
           <img
-            src="/logo-secco.png" 
+            src="/logo-secco.png"
             alt="SECCO"
             style={{ height: 56, objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
             onError={(e) => { e.target.style.display = 'none' }}
           />
-          <p style={{ color: 'rgba(0, 0, 0, 0.6)', fontSize: 13, marginTop: 8, letterSpacing: '0.5px' }}>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 13, marginTop: 8, letterSpacing: '0.5px' }}>
             TU TRANQUILIDAD NOS MUEVE
           </p>
         </div>
 
         {/* Card */}
         <div className="s-card" style={{ borderRadius: 20, padding: '32px 28px' }}>
-          <h2 style={{ color: '#1e3a8a', fontSize: 20, fontWeight: 700, margin: '0 0 8px', textAlign: 'center' }}>
+          <h2 style={{ color: 'var(--secco-gold)', fontSize: 20, fontWeight: 700, margin: '0 0 8px', textAlign: 'center' }}>
             Iniciar sesión
           </h2>
-          <p style={{ color: '#6B6B6B', fontSize: 13, textAlign: 'center', margin: '0 0 28px' }}>
+          <p style={{ color: 'var(--muted-foreground)', fontSize: 13, textAlign: 'center', margin: '0 0 28px' }}>
             Accede al sistema de gestión del taller
           </p>
 
@@ -77,7 +78,7 @@ export default function LoginScreen() {
             </div>
 
             {error && (
-              <div style={{ background: 'rgba(255,69,58,0.08)', border: '1px solid rgba(255,69,58,0.25)', borderRadius: 10, padding: '10px 14px' }}>
+              <div className="s-error-box">
                 <p className="s-error" style={{ margin: 0, fontSize: 13 }}>⚠ {error}</p>
               </div>
             )}
@@ -93,7 +94,7 @@ export default function LoginScreen() {
           </form>
         </div>
 
-        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, textAlign: 'center', marginTop: 24 }}>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 11, textAlign: 'center', marginTop: 24, opacity: 0.5 }}>
           SECCO © {new Date().getFullYear()}
         </p>
       </div>

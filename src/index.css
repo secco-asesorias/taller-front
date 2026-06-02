@@ -1,5 +1,60 @@
 @import "tailwindcss";
 
+/* ── Tailwind token registration ─────────────────────────────── */
+@theme inline {
+  --color-secco-gold:   var(--secco-gold);
+  --color-secco-black:  var(--secco-black);
+  --color-secco-red:    var(--secco-red);
+  --color-secco-green:  var(--secco-green);
+  --color-secco-purple: var(--secco-purple);
+  --color-background:   var(--background);
+  --color-foreground:   var(--foreground);
+  --color-card:         var(--card);
+  --color-border:       var(--border);
+  --color-muted:        var(--muted-foreground);
+  --color-destructive:  var(--destructive);
+  --font-sans:          var(--font-inter);
+}
+
+/* ── Design tokens ───────────────────────────────────────────── */
+:root {
+  /* Brand — mismos que seccoautomotriz.cl */
+  --secco-gold:        oklch(0.575 0.107 75);
+  --secco-black:       oklch(0 0 0);
+  --secco-red:         oklch(0.577 0.245 27.325);
+  --secco-green:       oklch(0.55 0.15 145);
+  --secco-green-dark:  oklch(0.35 0.12 145);
+  --secco-purple:      oklch(0.52 0.22 294);
+
+  /* Alpha palettes */
+  --secco-gold-10:     oklch(0.575 0.107 75 / 10%);
+  --secco-gold-30:     oklch(0.575 0.107 75 / 30%);
+  --secco-red-08:      oklch(0.577 0.245 27.325 / 8%);
+  --secco-red-22:      oklch(0.577 0.245 27.325 / 22%);
+  --secco-red-25:      oklch(0.577 0.245 27.325 / 25%);
+  --secco-red-35:      oklch(0.577 0.245 27.325 / 35%);
+  --secco-red-dark:    oklch(0.45 0.2 27);
+  --secco-green-12:    oklch(0.55 0.15 145 / 12%);
+  --secco-green-30:    oklch(0.55 0.15 145 / 30%);
+  --secco-muted-10:    oklch(0.5 0 0 / 10%);
+  --secco-purple-12:   oklch(0.52 0.22 294 / 12%);
+  --secco-purple-35:   oklch(0.52 0.22 294 / 35%);
+  --secco-gold-dark:   oklch(0.46 0.09 75);       /* #8a6a1a — gold oscuro para texto */
+  --warning:           oklch(0.7 0.16 60);         /* #FF9F0A — naranja advertencia */
+  --inactive:          oklch(0.84 0 0);            /* #DDDDDD — elementos inactivos */
+
+  /* UI */
+  --background:        oklch(1 0 0);
+  --foreground:        oklch(0.12 0.003 285);
+  --card:              oklch(0.965 0 0);
+  --border:            oklch(0.88 0 0);
+  --muted-foreground:  oklch(0.5 0 0);
+  --placeholder:       oklch(0.73 0 0);
+  --destructive:       var(--secco-red);
+  --radius:            0.625rem;
+  --font-inter:        'Inter', system-ui, -apple-system, sans-serif;
+}
+
 /* ── Keyframes ──────────────────────────────────────────────── */
 @keyframes seccion-in {
   from { opacity: 0; transform: translateY(14px); }
@@ -17,20 +72,12 @@
   to   { opacity: 1; }
 }
 
-/* ── Clases de animación ──────────────────────────────────────── */
-.section-enter {
-  animation: seccion-in 220ms ease both;
-}
+/* ── Animaciones ─────────────────────────────────────────────── */
+.section-enter  { animation: seccion-in 220ms ease both; }
+.check-animate  { animation: check-pop 180ms ease both; }
+.fade-in        { animation: fade-in 300ms ease both; }
 
-.check-animate {
-  animation: check-pop 180ms ease both;
-}
-
-.fade-in {
-  animation: fade-in 300ms ease both;
-}
-
-/* ── Base ─────────────────────────────────────────────────────── */
+/* ── Base ────────────────────────────────────────────────────── */
 @layer base {
   *, *::before, *::after {
     box-sizing: border-box;
@@ -39,13 +86,14 @@
 
   html {
     color-scheme: light;
+    font-family: var(--font-inter);
   }
 
   body {
     margin: 0;
-    background-color: #FFFFFF;
-    color: #111114;
-    font-family: system-ui, -apple-system, "SF Pro Display", Inter, sans-serif;
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -60,30 +108,19 @@
     font-family: inherit;
   }
 
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: #FFFFFF; }
-  ::-webkit-scrollbar-thumb { background: #E0E0E0; border-radius: 2px; }
+  ::-webkit-scrollbar       { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--background); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 }
 
-/* ── Variables reutilizables ──────────────────────────────────── */
-:root {
-  --bg:      #FFFFFF;
-  --surface: #F5F5F5;
-  --border:  #E0E0E0;
-  --gold:    #a98225;
-  --muted:   #6B6B6B;
-  --danger:  #FF453A;
-  --success: #a98225;
-}
-
-/* ── Utilidades globales de componentes ───────────────────────── */
+/* ── Inputs & formularios ────────────────────────────────────── */
 .s-input {
   width: 100%;
-  background: #FFFFFF;
+  background: var(--background);
   border: 1.5px solid var(--border);
   border-radius: 12px;
   padding: 16px;
-  color: #111114;
+  color: var(--foreground);
   font-size: 17px;
   font-family: inherit;
   outline: none;
@@ -91,15 +128,9 @@
   appearance: none;
   -webkit-appearance: none;
 }
-.s-input:focus {
-  border-color: var(--gold);
-}
-.s-input::placeholder {
-  color: #AAAAAA;
-}
-.s-input-err {
-  border-color: var(--danger) !important;
-}
+.s-input:focus         { border-color: var(--secco-gold); }
+.s-input::placeholder  { color: var(--placeholder); }
+.s-input-err           { border-color: var(--destructive) !important; }
 
 .s-label {
   display: block;
@@ -107,21 +138,23 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   margin-bottom: 8px;
 }
 
+/* ── Cards ───────────────────────────────────────────────────── */
 .s-card {
-  background: var(--surface);
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 24px;
 }
 
+/* ── Botones ─────────────────────────────────────────────────── */
 .s-btn-primary {
   width: 100%;
-  background: var(--gold);
-  color: #FFFFFF;
+  background: var(--secco-gold);
+  color: var(--background);
   font-weight: 600;
   font-size: 16px;
   border: none;
@@ -131,32 +164,40 @@
   transition: opacity 120ms ease;
   font-family: inherit;
 }
-.s-btn-primary:active { opacity: 0.8; }
+.s-btn-primary:active   { opacity: 0.8; }
 .s-btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .s-btn-secondary {
   width: 100%;
   background: transparent;
-  color: var(--gold);
+  color: var(--secco-gold);
   font-weight: 600;
   font-size: 16px;
-  border: 1.5px solid var(--gold);
+  border: 1.5px solid var(--secco-gold);
   border-radius: 12px;
   height: 52px;
   cursor: pointer;
   transition: opacity 120ms ease;
   font-family: inherit;
 }
-.s-btn-secondary:active  { opacity: 0.7; }
+.s-btn-secondary:active   { opacity: 0.7; }
 .s-btn-secondary:disabled { opacity: 0.35; cursor: not-allowed; }
 
+/* ── Mensajes de error ───────────────────────────────────────── */
 .s-error {
-  color: var(--danger);
+  color: var(--destructive);
   font-size: 12px;
   margin-top: 6px;
 }
 
-/* ── Checkbox personalizado ───────────────────────────────────── */
+.s-error-box {
+  background: var(--secco-red-08);
+  border: 1px solid var(--secco-red-25);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+/* ── Checkbox personalizado ──────────────────────────────────── */
 .s-checkbox {
   appearance: none;
   -webkit-appearance: none;
@@ -164,15 +205,15 @@
   height: 22px;
   border: 1.5px solid var(--border);
   border-radius: 6px;
-  background: #FFFFFF;
+  background: var(--background);
   cursor: pointer;
   position: relative;
   flex-shrink: 0;
   transition: background 120ms, border-color 120ms;
 }
 .s-checkbox:checked {
-  background: var(--gold);
-  border-color: var(--gold);
+  background: var(--secco-gold);
+  border-color: var(--secco-gold);
 }
 .s-checkbox:checked::after {
   content: '';
@@ -181,15 +222,85 @@
   top: 2px;
   width: 8px;
   height: 13px;
-  border: 2px solid #FFFFFF;
+  border: 2px solid var(--background);
   border-top: none;
   border-left: none;
   transform: rotate(45deg);
 }
 
-/* ── Separador sección ────────────────────────────────────────── */
+/* ── Separador sección ───────────────────────────────────────── */
 .s-divider {
   height: 1px;
   background: var(--border);
   margin: 4px 0 20px;
+}
+
+/* ── Status badges ───────────────────────────────────────────── */
+.status-badge-cerrada {
+  background: var(--secco-green-12);
+  color: var(--secco-green-dark);
+  border: 1px solid var(--secco-green-30);
+}
+
+.status-badge-borrador {
+  background: var(--secco-muted-10);
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+}
+
+.status-badge-activa {
+  background: var(--secco-gold-10);
+  color: var(--secco-gold);
+  border: 1px solid var(--secco-gold-30);
+}
+
+/* ── Generic info badge (OT asignada, admin rol) ─────────────── */
+.status-badge-info {
+  background: var(--secco-gold-10);
+  color: var(--secco-gold);
+  border: 1px solid var(--secco-gold-30);
+}
+
+/* ── Cotización status badges ────────────────────────────────── */
+.status-badge-aprobada {
+  background: var(--secco-green-12);
+  color: var(--secco-green-dark);
+  border: 1px solid var(--secco-green-30);
+}
+
+.status-badge-rechazada {
+  background: var(--secco-red-08);
+  color: var(--secco-red);
+  border: 1px solid var(--secco-red-25);
+}
+
+.status-badge-enviada {
+  background: var(--secco-gold);
+  color: var(--background);
+  border: none;
+}
+
+/* ── Toast types ─────────────────────────────────────────────── */
+.toast-success {
+  border: 1.5px solid var(--secco-green-30);
+  background: var(--secco-green-12);
+  color: var(--secco-green-dark);
+}
+
+.toast-error {
+  border: 1.5px solid var(--secco-red-35);
+  background: var(--secco-red-08);
+  color: var(--secco-red-dark);
+}
+
+.toast-warning {
+  border: 1.5px solid var(--secco-gold-30);
+  background: var(--secco-gold-10);
+  color: var(--secco-gold);
+}
+
+.toast-info {
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
 }
