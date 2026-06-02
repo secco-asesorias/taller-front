@@ -1433,6 +1433,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                   type="number" min="0" max="100"
                   value={descuento}
                   onChange={(e) => { setDescuento(e.target.value); touch(null, null, e.target.value, null, null, null, null) }}
+                  onFocus={(e) => e.target.select()}
                   placeholder="0"
                   style={{ width: 90, fontSize: 12, border: '1px solid var(--border)', borderRadius: 6, padding: '4px 8px', textAlign: 'right', fontFamily: 'inherit', outline: 'none', color: 'var(--foreground)' }}
                 />

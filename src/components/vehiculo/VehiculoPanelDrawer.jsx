@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchVehiculoPanelData } from '../../services/vehiculoPanelService'
+import { useRol } from '../../context/AuthContext'
 import styles from './VehiculoPanelDrawer.module.css'
 
 const TABS = [
@@ -55,8 +56,16 @@ function ListaTab({ items, render, empty, error }) {
   return <div>{items.map(render)}</div>
 }
 
-function ResumenTab({ data, clientes, counts, onSelectTab, onNuevaActa, onNuevaEntrega }) {
+function ResumenTab({ data, clientes, counts, onSelectTab, onNuevaActa, onNuevaEntrega, esTecnico }) {
   const veh = data.vehiculo || {}
+  const accesos = [
+    { label: 'Ingreso', count: counts.actas, tab: 'actas' },
+    { label: 'Entregas', count: counts.entregas, tab: 'entregas' },
+    { label: 'Diagnósticos', count: counts.diagnosticos, tab: 'diagnosticos' },
+    { label: 'Cotizaciones', count: counts.cotizaciones, tab: 'cotizaciones' },
+    { label: 'OT', count: counts.ordenes, tab: 'ordenes' },
+  ].filter((item) => !esTecnico || item.tab !== 'cotizaciones')
+
   return (
     <div>
       {clientes.length > 0 ? (
@@ -81,13 +90,7 @@ function ResumenTab({ data, clientes, counts, onSelectTab, onNuevaActa, onNuevaE
 
       <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 800, color: 'var(--secco-gold)', textTransform: 'uppercase' }}>Accesos rápidos</p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-        {[
-          { label: 'Ingreso', count: counts.actas, tab: 'actas' },
-          { label: 'Entregas', count: counts.entregas, tab: 'entregas' },
-          { label: 'Diagnósticos', count: counts.diagnosticos, tab: 'diagnosticos' },
-          { label: 'Cotizaciones', count: counts.cotizaciones, tab: 'cotizaciones' },
-          { label: 'OT', count: counts.ordenes, tab: 'ordenes' },
-        ].map((item) => (
+        {accesos.map((item) => (
           <button
             key={item.tab}
             type="button"
@@ -137,6 +140,11 @@ function cotBadgeClass(status) {
 
 export default function VehiculoPanelDrawer({ patente, onClose }) {
   const navigate = useNavigate()
+  const { esTecnico } = useRol()
+  const tabsVisibles = useMemo(
+    () => esTecnico ? TABS.filter((t) => t.id !== 'cotizaciones') : TABS,
+    [esTecnico],
+  )
   const [tab, setTab] = useState('resumen')
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState(null)
@@ -277,7 +285,7 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
               ) : null}
 
               <div className={styles.tabs}>
-                {TABS.map((t) => {
+                {tabsVisibles.map((t) => {
                   const count = t.id === 'resumen' ? null : counts[t.id]
                   const label = count != null ? `${t.label} (${count})` : t.label
                   return (
@@ -301,6 +309,7 @@ export default function VehiculoPanelDrawer({ patente, onClose }) {
                   onSelectTab={setTab}
                   onNuevaActa={() => go('/actas/nueva')}
                   onNuevaEntrega={() => go('/actas-entrega/nueva')}
+                  esTecnico={esTecnico}
                 />
               ) : null}
 

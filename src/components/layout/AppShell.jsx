@@ -4,16 +4,18 @@ import { useRol } from '../../context/AuthContext'
 import { supabase } from '../../services/api'
 import styles from './AppShell.module.css'
 
-const NAV_ITEMS = [
+const NAV_ITEMS_BASE = [
   { label: 'Dashboard', to: '/', icon: '🏠' },
   { label: 'Actas ingreso', to: '/actas', icon: '📂' },
   { label: 'Actas entrega', to: '/actas-entrega', icon: '🚗' },
   { label: 'Diagnósticos', to: '/diagnosticos', icon: '🔧' },
-  { label: 'Cotizaciones', to: '/cotizaciones', icon: '💰' },
   { label: 'Órdenes de Trabajo', to: '/ordenes-trabajo', icon: '⚙️' },
   { label: 'Clientes', to: '/clientes', icon: '👥' },
   { label: 'Vehículos', to: '/vehiculos', icon: '🚙' },
 ]
+
+const NAV_COTIZACIONES = { label: 'Cotizaciones', to: '/cotizaciones', icon: '💰' }
+const NAV_USUARIOS = { label: 'Usuarios', to: '/usuarios', icon: '🔑' }
 
 const MOBILE_MAIN = [
   { label: 'Inicio', to: '/', icon: '🏠' },
@@ -23,13 +25,10 @@ const MOBILE_MAIN = [
 ]
 
 const MOBILE_MORE_BASE = [
-  { label: 'Cotizaciones', to: '/cotizaciones', icon: '💰' },
   { label: 'Entregas', to: '/actas-entrega', icon: '🚗' },
   { label: 'Clientes', to: '/clientes', icon: '👥' },
   { label: 'Vehículos', to: '/vehiculos', icon: '🚙' },
 ]
-
-const NAV_USUARIOS = { label: 'Usuarios', to: '/usuarios', icon: '🔑' }
 
 function NavItem({ to, icon, label }) {
   return (
@@ -44,15 +43,17 @@ function NavItem({ to, icon, label }) {
 }
 
 export default function AppShell() {
-  const { nombre, email, iniciales, avatarUrl, rolEtiqueta, esAdmin } = useRol()
-  const navItems = useMemo(
-    () => (esAdmin ? [...NAV_ITEMS, NAV_USUARIOS] : NAV_ITEMS),
-    [esAdmin],
-  )
-  const mobileMore = useMemo(
-    () => (esAdmin ? [...MOBILE_MORE_BASE, NAV_USUARIOS] : MOBILE_MORE_BASE),
-    [esAdmin],
-  )
+  const { nombre, email, iniciales, avatarUrl, rolEtiqueta, esAdmin, esTecnico } = useRol()
+  const navItems = useMemo(() => {
+    const items = esTecnico ? [...NAV_ITEMS_BASE] : [...NAV_ITEMS_BASE, NAV_COTIZACIONES]
+    if (esAdmin) items.push(NAV_USUARIOS)
+    return items
+  }, [esAdmin, esTecnico])
+  const mobileMore = useMemo(() => {
+    const items = esTecnico ? [...MOBILE_MORE_BASE] : [NAV_COTIZACIONES, ...MOBILE_MORE_BASE]
+    if (esAdmin) items.push(NAV_USUARIOS)
+    return items
+  }, [esAdmin, esTecnico])
   const navigate = useNavigate()
   const location = useLocation()
   const pathname = location.pathname || '/'
