@@ -371,7 +371,10 @@ function OTVistaTecnico({ ot: otInicial, onUpdate, onVolver }) {
 
   const elapsed = ot.termino_servicio && ot.inicio_servicio
     ? new Date(ot.termino_servicio) - new Date(ot.inicio_servicio) : null
-  const repuestos = Array.isArray(ot.repuestos) ? ot.repuestos : []
+  const repuestos = (Array.isArray(ot.repuestos) && ot.repuestos.length)
+    ? ot.repuestos
+    : (ot.items || []).filter(it => it.descripcion && String(it.tipo || '').toLowerCase().includes('repuesto'))
+        .map((it, i) => ({ id: it.id || `rep-${i + 1}`, nombre: it.descripcion || '', cantidad: Number(it.cantidad || 1), precio: Number(it.precio_unitario || 0) }))
   const instrucciones = Array.isArray(ot.instrucciones) ? ot.instrucciones.slice().sort((a, b) => a.orden - b.orden) : []
   const veh = ot.vehiculos || ot.actas?.vehiculos || {}
   const cli = ot.clientes  || ot.actas?.clientes  || {}
@@ -539,9 +542,7 @@ export default function OTForm({ otInicial, onVolver }) {
 
   useEffect(() => {
     if (ot.tecnico_id) setTecnicoId(ot.tecnico_id)
-    const nombre = ot.tecnico_nombre || ot.tecnico_asignado
-    if (nombre) setTecnico(nombre)
-  }, [ot.tecnico_id, ot.tecnico_nombre, ot.tecnico_asignado])
+  }, [ot.tecnico_id])
 
   const tecnicosOpciones = useMemo(() => opcionesTecnicos(tecnicos, ot), [tecnicos, ot])
 

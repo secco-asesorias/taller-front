@@ -5,10 +5,10 @@ import AppShell from './components/layout/AppShell'
 import { ToastProvider } from './components/common/ToastProvider'
 import { ConfirmProvider } from './components/common/ConfirmProvider'
 import { VehiculoPanelProvider } from './context/VehiculoPanelContext'
-
-// Screens
 import LoginScreen from './screens/Login/LoginScreen'
 import AdminDashboard from './screens/Dashboard/AdminDashboard'
+import FormularioPage from './screens/Formulario/page'
+import HorarioPage from './screens/Horario/page'
 import ActasListScreen from './screens/Actas/ActasListScreen'
 import ActaForm from './screens/Actas/ActaForm'
 import ActaDetalleScreen from './screens/Actas/ActaDetalleScreen'
@@ -67,7 +67,7 @@ function ActasListRoute() {
 
 function ActaNuevaRoute() {
   const navigate = useNavigate()
-  return <ActaForm onVolver={() => navigate('/')} />
+  return <ActaForm onVolver={() => navigate('/portal')} />
 }
 
 function ActaEditarRoute() {
@@ -137,9 +137,38 @@ function DiagnosticosListRoute() {
 
 function CotizacionNuevaRoute() {
   const navigate = useNavigate()
+  const { state } = useLocation()
+
+  const cotizacionInicial = (() => {
+    const reserva = state?.reserva
+    if (!reserva) return nuevaCotizacionPlantilla()
+    const [marca = '', ...resto] = (reserva.marca_modelo || '').trim().split(/\s+/)
+    const plantilla = nuevaCotizacionPlantilla()
+    return {
+      ...plantilla,
+      notas: reserva.trabajo_solicitado || '',
+      vista_cliente: {
+        ...plantilla.vista_cliente,
+        cliente_manual: {
+          nombre: reserva.nombre || '',
+          telefono: reserva.telefono || '',
+          email: reserva.email || '',
+        },
+        vehiculo_manual: {
+          marca,
+          modelo: resto.join(' '),
+          patente: reserva.patente || '',
+          anio: reserva.año || '',
+          vin: reserva.vin || '',
+          km: reserva.km || '',
+        },
+      },
+    }
+  })()
+
   return (
     <PresupuestoForm
-      cotizacionInicial={nuevaCotizacionPlantilla()}
+      cotizacionInicial={cotizacionInicial}
       onVolver={() => navigate('/cotizaciones')}
       onPersistido={(cot) => navigate(`/cotizaciones/${cot.id}`, { replace: true })}
       onAbrirOT={(ot) => navigate(`/ordenes-trabajo/${ot.id}`)}
@@ -225,13 +254,34 @@ function CotizacionesListRoute() {
 function OTDetalleRoute() {
   const { otId } = useParams()
   const navigate = useNavigate()
+  const { esTecnico, perfil } = useRol()
   const [otActiva, setOtActiva] = useState(null)
+  const [accesoDenegado, setAccesoDenegado] = useState(false)
 
   useEffect(() => {
     import('./services/ordenTrabajoService').then(({ ordenTrabajoService }) => {
-      ordenTrabajoService.obtener(otId).then(setOtActiva).catch(() => setOtActiva(null))
+      ordenTrabajoService.obtener(otId)
+        .then((ot) => {
+          if (esTecnico && ot.tecnico_id !== perfil?.id) {
+            setAccesoDenegado(true)
+          } else {
+            setOtActiva(ot)
+          }
+        })
+        .catch(() => navigate('/ordenes-trabajo', { replace: true }))
     })
-  }, [otId])
+  }, [otId, esTecnico, perfil?.id])
+
+  if (accesoDenegado) {
+    return (
+      <div style={{ padding: '48px 16px', textAlign: 'center' }}>
+        <p style={{ color: 'var(--muted-foreground)', fontSize: 14, marginBottom: 16 }}>No tienes acceso a esta orden de trabajo.</p>
+        <button type="button" className="s-btn-secondary" onClick={() => navigate('/ordenes-trabajo', { replace: true })}>
+          Volver
+        </button>
+      </div>
+    )
+  }
 
   if (!otActiva) {
     return (
@@ -325,7 +375,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route index element={<DashboardRoute />} />
+        <Route path="portal" element={<DashboardRoute />} />
+        <Route path="horario" element={<HorarioPage />} />
 
         <Route path="actas" element={<ActasListRoute />} />
         <Route path="actas/nueva" element={<ActaNuevaRoute />} />
@@ -353,7 +404,7 @@ function AppRoutes() {
         <Route path="vehiculos/:patente" element={<VehiculoDetalleRoute />} />
         <Route path="usuarios" element={<UsuariosListScreen />} />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<Navigate to="/portal" replace />} />
       </Route>
     </Routes>
   )
@@ -362,6 +413,9 @@ function AppRoutes() {
 // ── AuthGate: muestra login si no hay sesión ──────────────────
 function AuthGate() {
   const { usuario, cargando } = useAuth()
+  const { pathname } = useLocation()
+
+  if (pathname === '/') return <FormularioPage />
 
   if (cargando) {
     return (

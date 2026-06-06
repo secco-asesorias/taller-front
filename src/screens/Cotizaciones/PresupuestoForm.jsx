@@ -296,7 +296,7 @@ const ITEM_API_PLACEHOLDER = {
 }
 
 const EMPTY_CLIENTE_MANUAL = { nombre: '', telefono: '', email: '' }
-const EMPTY_VEHICULO_MANUAL = { marca: '', modelo: '', patente: '', anio: '' }
+const EMPTY_VEHICULO_MANUAL = { marca: '', modelo: '', patente: '', anio: '', vin: '', km: '' }
 
 function mergeClienteManual(cot) {
   return { ...EMPTY_CLIENTE_MANUAL, ...(cot?.vista_cliente?.cliente_manual || {}) }
@@ -1780,6 +1780,30 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
                     onChange={(e) => patchVehiculoManual({ anio: e.target.value.replace(/\D/g, '').slice(0, 4) })}
                     placeholder="2020"
                     style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8 }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Kilometraje</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className="s-input"
+                    value={vehiculoManual.km}
+                    onChange={(e) => patchVehiculoManual({ km: e.target.value.replace(/\D/g, '') })}
+                    placeholder="125000"
+                    style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8 }}
+                  />
+                </label>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 4, gridColumn: '1 / -1' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>VIN / Chasis</span>
+                  <input
+                    type="text"
+                    className="s-input"
+                    value={vehiculoManual.vin}
+                    onChange={(e) => patchVehiculoManual({ vin: e.target.value.toUpperCase() })}
+                    placeholder="WBA3A5C51CF256985"
+                    autoComplete="off"
+                    style={{ fontSize: 13, padding: '8px 10px', borderRadius: 8, fontFamily: 'monospace', letterSpacing: '1px' }}
                   />
                 </label>
               </div>

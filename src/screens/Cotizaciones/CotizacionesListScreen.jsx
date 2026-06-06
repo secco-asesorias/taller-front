@@ -38,6 +38,15 @@ function money(v) {
   return v ? `$${Math.round(Number(v)).toLocaleString('es-CL')}` : ''
 }
 
+function fechaStr(isoStr) {
+  if (!isoStr) return ''
+  return new Date(isoStr).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+function hoyISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+
 export default function CotizacionesListScreen({ onNavigate }) {
   const toast = useToast()
   const { confirm } = useConfirm()
@@ -45,31 +54,54 @@ export default function CotizacionesListScreen({ onNavigate }) {
   const [cotizaciones, setCotizaciones] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
-  const [filtroDebounced, setFiltroDebounced] = useState('')
   const [refreshNonce, setRefreshNonce] = useState(0)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState(null)
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
+  const [orden, setOrden] = useState('nueva')
 
-  useEffect(() => {
-    const trimmed = filtro.trim()
-    if (!trimmed) {
-      setFiltroDebounced('')
-      return
+  function setRango(rango) {
+    const hoy = new Date()
+    if (rango === 'hoy') {
+      const s = hoyISO(); setFechaDesde(s); setFechaHasta(s)
+    } else if (rango === 'semana') {
+      const d = new Date(hoy)
+      d.setDate(hoy.getDate() - ((hoy.getDay() + 6) % 7))
+      setFechaDesde(d.toISOString().slice(0, 10)); setFechaHasta(hoyISO())
+    } else if (rango === 'mes') {
+      const m = String(hoy.getMonth() + 1).padStart(2, '0')
+      setFechaDesde(`${hoy.getFullYear()}-${m}-01`); setFechaHasta(hoyISO())
+    } else {
+      setFechaDesde(''); setFechaHasta('')
     }
-    const t = setTimeout(() => setFiltroDebounced(trimmed), 350)
-    return () => clearTimeout(t)
-  }, [filtro])
+  }
+
+  // Filtrado y ordenamiento 100% client-side
+  const cotizacionesFiltradas = cotizaciones
+    .filter((cot) => {
+      const veh = cot.vehiculos || cot.actas?.vehiculos || cot.vista_cliente?.vehiculo_manual || {}
+      const patente = String(veh.patente || '').toUpperCase()
+      const q = filtro.trim().toUpperCase()
+      if (q && !patente.includes(q)) return false
+      if (fechaDesde || fechaHasta) {
+        const f = new Date(cot.created_at)
+        if (fechaDesde && f < new Date(fechaDesde + 'T00:00:00')) return false
+        if (fechaHasta && f > new Date(fechaHasta + 'T23:59:59')) return false
+      }
+      return true
+    })
+    .sort((a, b) => {
+      const diff = new Date(a.created_at) - new Date(b.created_at)
+      return orden === 'nueva' ? -diff : diff
+    })
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     setError('')
 
-    const req = filtroDebounced
-      ? cotizacionService.buscarPorPatente(filtroDebounced, { limite: LIMITE_LISTA })
-      : cotizacionService.listar({ limite: LIMITE_LISTA })
-
-    req
+    cotizacionService.listar({ limite: LIMITE_LISTA })
       .then((data) => {
         if (cancelled) return
         setCotizaciones(unwrapApiList(data, ['cotizaciones']))
@@ -80,14 +112,10 @@ export default function CotizacionesListScreen({ onNavigate }) {
           setError(err?.message || 'Error al cargar cotizaciones')
         }
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+      .finally(() => { if (!cancelled) setLoading(false) })
 
-    return () => {
-      cancelled = true
-    }
-  }, [filtroDebounced, refreshNonce])
+    return () => { cancelled = true }
+  }, [refreshNonce])
 
   const refrescarLista = () => setRefreshNonce((n) => n + 1)
   const mostrarSpinnerCompleto = loading && !cotizaciones.length
@@ -157,7 +185,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
             Presupuestos del taller. Puedes buscar por patente o revisar los últimos cargados.
           </p>
           <p style={{ margin: '8px 0 0', color: 'var(--foreground)', fontSize: 12, fontWeight: 600 }}>
-            {loading ? 'Cargando…' : `${cotizaciones.length} resultado${cotizaciones.length === 1 ? '' : 's'}`}
+            {loading ? 'Cargando…' : `${cotizacionesFiltradas.length} resultado${cotizacionesFiltradas.length === 1 ? '' : 's'}${cotizacionesFiltradas.length !== cotizaciones.length ? ` (de ${cotizaciones.length})` : ''}`}
             {loading && cotizaciones.length > 0 ? ' · actualizando' : ''}
           </p>
         </div>
@@ -180,16 +208,78 @@ export default function CotizacionesListScreen({ onNavigate }) {
           <input
             type="text"
             className="s-input"
-            placeholder="Buscar por patente…"
+            placeholder="Filtrar por patente…"
             value={filtro}
             onChange={(e) => setFiltro(e.target.value)}
             autoComplete="off"
             style={{ width: '100%', paddingLeft: 36 }}
           />
         </div>
-        <p style={{ color: 'var(--placeholder)', fontSize: 12, margin: 0, lineHeight: 1.45 }}>
-          Presupuesto inicial vinculado al acta: paso «Trabajo solicitado» del formulario de acta. El borrador en servidor se crea al guardar o al cambiar de estado.
-        </p>
+
+        {/* Orden y filtro por fecha */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 10 }}>
+          <select
+            value={orden}
+            onChange={(e) => setOrden(e.target.value)}
+            className="s-input"
+            style={{ width: 'auto', fontSize: 12, padding: '5px 8px', cursor: 'pointer' }}
+          >
+            <option value="nueva">Más nueva primero</option>
+            <option value="vieja">Más vieja primero</option>
+          </select>
+          <span style={{ color: 'var(--border)', fontSize: 14 }}>|</span>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginTop: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted-foreground)', whiteSpace: 'nowrap' }}>Fecha:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <input
+              type="date"
+              className="s-input"
+              value={fechaDesde}
+              onChange={(e) => setFechaDesde(e.target.value)}
+              style={{ width: 140, fontSize: 12, padding: '5px 8px' }}
+              title="Desde"
+            />
+            <span style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>—</span>
+            <input
+              type="date"
+              className="s-input"
+              value={fechaHasta}
+              onChange={(e) => setFechaHasta(e.target.value)}
+              style={{ width: 140, fontSize: 12, padding: '5px 8px' }}
+              title="Hasta"
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            {[['hoy', 'Hoy'], ['semana', 'Esta semana'], ['mes', 'Este mes']].map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setRango(k)}
+                style={{
+                  fontSize: 11, fontWeight: 600, padding: '4px 9px', borderRadius: 8, cursor: 'pointer',
+                  border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--foreground)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+            {(fechaDesde || fechaHasta) && (
+              <button
+                type="button"
+                onClick={() => setRango('todo')}
+                style={{
+                  fontSize: 11, fontWeight: 600, padding: '4px 9px', borderRadius: 8, cursor: 'pointer',
+                  border: '1px solid var(--secco-red-25)', background: 'var(--secco-red-08)',
+                  color: 'var(--destructive)', whiteSpace: 'nowrap',
+                }}
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -216,7 +306,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
         </div>
       ) : (
         <div className="cot-grid">
-          {cotizaciones.map((cot) => {
+          {cotizacionesFiltradas.map((cot) => {
             const veh = cot.vehiculos || cot.actas?.vehiculos || cot.vista_cliente?.vehiculo_manual || {}
             const cli = cot.clientes || cot.actas?.clientes || cot.vista_cliente?.cliente_manual || {}
             const eliminando = deletingId === cot.id
@@ -254,8 +344,13 @@ export default function CotizacionesListScreen({ onNavigate }) {
                         )}
                       </p>
                       {cli.nombre ? (
-                        <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 12 }}>{cli.nombre}</p>
+                        <p style={{ margin: '0 0 2px', color: 'var(--muted-foreground)', fontSize: 12 }}>{cli.nombre}</p>
                       ) : null}
+                      {cot.created_at && (
+                        <p style={{ margin: 0, color: 'var(--placeholder)', fontSize: 11 }}>
+                          📅 {fechaStr(cot.created_at)}
+                        </p>
+                      )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
                       <span
@@ -304,7 +399,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
             )
           })}
 
-          {!cotizaciones.length && !loading && (
+          {!cotizacionesFiltradas.length && !loading && (
             <div
               className="s-card"
               style={{
@@ -317,12 +412,14 @@ export default function CotizacionesListScreen({ onNavigate }) {
               }}
             >
               <p style={{ color: 'var(--foreground)', fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>
-                {filtroDebounced ? 'No hay cotizaciones para esa patente' : 'No hay cotizaciones en el listado'}
+                {filtro.trim() ? 'No hay cotizaciones para esa patente' : (fechaDesde || fechaHasta) ? 'No hay cotizaciones en ese rango de fechas' : 'No hay cotizaciones en el listado'}
               </p>
               <p style={{ color: 'var(--muted-foreground)', fontSize: 14, margin: '0 0 20px', lineHeight: 1.5 }}>
-                {filtroDebounced
-                  ? 'Prueba con otra patente o limpia el buscador para ver los últimos registros.'
-                  : 'Abre el editor para cargar ítems y totales, o genera un presupuesto desde una acta.'}
+                {filtro.trim()
+                  ? 'Probá con otra patente o limpiá el buscador para ver todos.'
+                  : (fechaDesde || fechaHasta)
+                    ? 'Ajustá el rango de fechas o presioná Limpiar para ver todas.'
+                    : 'Abrí el editor para cargar ítems y totales, o generá un presupuesto desde una acta.'}
               </p>
               <button type="button" className="s-btn-primary" onClick={() => onNavigate?.('cotizaciones/nueva')}>
                 + Agregar presupuesto
