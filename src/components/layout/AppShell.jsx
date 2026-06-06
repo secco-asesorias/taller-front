@@ -5,7 +5,8 @@ import { supabase } from '../../services/api'
 import styles from './AppShell.module.css'
 
 const NAV_ITEMS_BASE = [
-  { label: 'Dashboard', to: '/', icon: '🏠' },
+  { label: 'Dashboard', to: '/portal', icon: '🏠' },
+  { label: 'Horario', to: '/horario', icon: '📅' },
   { label: 'Actas ingreso', to: '/actas', icon: '📂' },
   { label: 'Actas entrega', to: '/actas-entrega', icon: '🚗' },
   { label: 'Diagnósticos', to: '/diagnosticos', icon: '🔧' },
@@ -18,13 +19,14 @@ const NAV_COTIZACIONES = { label: 'Cotizaciones', to: '/cotizaciones', icon: '�
 const NAV_USUARIOS = { label: 'Usuarios', to: '/usuarios', icon: '🔑' }
 
 const MOBILE_MAIN = [
-  { label: 'Inicio', to: '/', icon: '🏠' },
+  { label: 'Inicio', to: '/portal', icon: '🏠' },
   { label: 'Actas', to: '/actas', icon: '📂' },
   { label: 'Diag.', to: '/diagnosticos', icon: '🔧' },
   { label: 'OT', to: '/ordenes-trabajo', icon: '⚙️' },
 ]
 
 const MOBILE_MORE_BASE = [
+  { label: 'Horario', to: '/horario', icon: '📅' },
   { label: 'Entregas', to: '/actas-entrega', icon: '🚗' },
   { label: 'Clientes', to: '/clientes', icon: '👥' },
   { label: 'Vehículos', to: '/vehiculos', icon: '🚙' },
@@ -58,7 +60,8 @@ export default function AppShell() {
   const location = useLocation()
   const pathname = location.pathname || '/'
   const esFullWidth = (
-    pathname === '/' ||
+    pathname === '/portal' ||
+    pathname.startsWith('/horario') ||
     pathname.startsWith('/actas') ||
     pathname.startsWith('/actas-entrega') ||
     pathname.startsWith('/diagnosticos') ||
@@ -81,7 +84,7 @@ export default function AppShell() {
           <div className={styles.sidebarInner}>
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/portal')}
               className={`${styles.brand} ${styles.brandBtn}`}
             >
               <img
