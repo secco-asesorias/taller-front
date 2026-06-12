@@ -54,6 +54,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
   const [cotizaciones, setCotizaciones] = useState([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
+  const [filtroModelo, setFiltroModelo] = useState('')
   const [refreshNonce, setRefreshNonce] = useState(0)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState(null)
@@ -84,6 +85,10 @@ export default function CotizacionesListScreen({ onNavigate }) {
       const patente = String(veh.patente || '').toUpperCase()
       const q = filtro.trim().toUpperCase()
       if (q && !patente.includes(q)) return false
+      const modelo = String(veh.modelo || '').toLowerCase()
+      const marca = String(veh.marca || '').toLowerCase()
+      const qModelo = filtroModelo.trim().toLowerCase()
+      if (qModelo && !modelo.includes(qModelo) && !marca.includes(qModelo)) return false
       if (fechaDesde || fechaHasta) {
         const f = new Date(cot.created_at)
         if (fechaDesde && f < new Date(fechaDesde + 'T00:00:00')) return false
@@ -182,7 +187,7 @@ export default function CotizacionesListScreen({ onNavigate }) {
         <div style={{ minWidth: 0 }}>
           <h2 style={{ color: 'var(--foreground)', fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.3px' }}>Cotizaciones</h2>
           <p style={{ margin: '6px 0 0', color: 'var(--muted-foreground)', fontSize: 13, lineHeight: 1.45, maxWidth: 520 }}>
-            Presupuestos del taller. Puedes buscar por patente o revisar los últimos cargados.
+            Presupuestos del taller. Puedes buscar por patente, modelo o marca, o revisar los últimos cargados.
           </p>
           <p style={{ margin: '8px 0 0', color: 'var(--foreground)', fontSize: 12, fontWeight: 600 }}>
             {loading ? 'Cargando…' : `${cotizacionesFiltradas.length} resultado${cotizacionesFiltradas.length === 1 ? '' : 's'}${cotizacionesFiltradas.length !== cotizaciones.length ? ` (de ${cotizaciones.length})` : ''}`}
@@ -211,6 +216,19 @@ export default function CotizacionesListScreen({ onNavigate }) {
             placeholder="Filtrar por patente…"
             value={filtro}
             onChange={(e) => setFiltro(e.target.value)}
+            autoComplete="off"
+            style={{ width: '100%', paddingLeft: 36 }}
+          />
+        </div>
+
+        <div className="cot-searchWrap" style={{ marginBottom: 0 }}>
+          <span className="cot-searchIcon">⌕</span>
+          <input
+            type="text"
+            className="s-input"
+            placeholder="Filtrar por modelo o marca…"
+            value={filtroModelo}
+            onChange={(e) => setFiltroModelo(e.target.value)}
             autoComplete="off"
             style={{ width: '100%', paddingLeft: 36 }}
           />

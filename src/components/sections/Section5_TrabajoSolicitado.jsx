@@ -1,6 +1,7 @@
-﻿import { useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { useForm } from '../../context/FormContext'
 import { validarSeccion5 } from '../../utils/validation'
+import { normalizePatente } from '../../lib/normalizePatente'
 
 const SUGERENCIAS = [
   'Revisión general de motor','Cambio de aceite y filtros','Revisión de frenos',
@@ -25,6 +26,7 @@ export default function Section5_TrabajoSolicitado({
 }) {
   const { formData, updateForm } = useForm()
   const [errores, setErrores] = useState({})
+  const [filtroPresupuesto, setFiltroPresupuesto] = useState('')
 
   function agregarSugerencia(texto) {
     const actual = formData.trabajo_solicitado ?? ''
@@ -56,6 +58,86 @@ export default function Section5_TrabajoSolicitado({
 
   const chars = (formData.trabajo_solicitado ?? '').length
   const actaListaParaPresupuesto = !!formData.acta_id
+
+  const patenteActa = normalizePatente(formData.patente)
+  const filtro = filtroPresupuesto.trim().toLowerCase()
+
+  const { coincidentes, resto } = useMemo(() => {
+    const filtrados = presupuestosSinAsignar.filter((cot) => {
+      if (!filtro) return true
+      const veh = cot.vista_cliente?.vehiculo_manual || {}
+      const cli = cot.vista_cliente?.cliente_manual || {}
+      const titulo = cot.vista_cliente?.titulo || ''
+      const campos = [
+        String(cot.numero_cotizacion ?? ''),
+        titulo,
+        veh.patente || '',
+        veh.marca || '',
+        veh.modelo || '',
+        cli.nombre || '',
+      ]
+      return campos.some((c) => String(c).toLowerCase().includes(filtro))
+    })
+    if (!patenteActa) return { coincidentes: [], resto: filtrados }
+    const coincidentes = []
+    const resto = []
+    for (const cot of filtrados) {
+      const patCot = normalizePatente(cot.vista_cliente?.vehiculo_manual?.patente)
+      if (patCot && patCot === patenteActa) coincidentes.push(cot)
+      else resto.push(cot)
+    }
+    return { coincidentes, resto }
+  }, [presupuestosSinAsignar, filtro, patenteActa])
+
+  function renderCotizacion(cot, recomendada = false) {
+    const veh = cot.vista_cliente?.vehiculo_manual || {}
+    const cli = cot.vista_cliente?.cliente_manual || {}
+    const titulo = cot.vista_cliente?.titulo || `COT-${cot.numero_cotizacion}`
+    const asignando = asignandoPresupuesto === cot.id
+    return (
+      <button
+        key={cot.id}
+        type="button"
+        onClick={() => onAsignarPresupuesto?.(cot.id)}
+        disabled={asignando || !!presupuestoSeleccionadoId}
+        style={{
+          width: '100%',
+          textAlign: 'left',
+          background: 'var(--card)',
+          border: recomendada ? '1px solid var(--secco-gold-30)' : '1px solid var(--border)',
+          borderRadius: 10,
+          padding: 12,
+          cursor: asignando || presupuestoSeleccionadoId ? 'default' : 'pointer',
+          fontFamily: 'inherit',
+          opacity: asignando || presupuestoSeleccionadoId ? 0.65 : 1,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '0 0 2px' }}>
+              <p style={{ margin: 0, color: 'var(--foreground)', fontSize: 14, fontWeight: 700 }}>
+                {titulo}
+              </p>
+              {recomendada && (
+                <span style={{ background: 'var(--secco-gold-10)', color: 'var(--secco-gold)', fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 6, flexShrink: 0 }}>
+                  Coincide
+                </span>
+              )}
+            </div>
+            <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 12 }}>
+              COT-{cot.numero_cotizacion}
+              {veh.patente ? ` · ${veh.patente}` : ''}
+              {veh.marca || veh.modelo ? ` · ${[veh.marca, veh.modelo].filter(Boolean).join(' ')}` : ''}
+              {cli.nombre ? ` · ${cli.nombre}` : ''}
+            </p>
+          </div>
+          <span style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+            {asignando ? 'Asignando...' : 'Asignar'}
+          </span>
+        </div>
+      </button>
+    )
+  }
 
   return (
     <div className="section-enter" style={{ padding: '0 16px 40px' }}>
@@ -137,49 +219,41 @@ export default function Section5_TrabajoSolicitado({
         ) : !presupuestosSinAsignar.length ? (
           <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: 0 }}>No hay presupuestos sin asignar disponibles.</p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {presupuestosSinAsignar.map((cot) => {
-              const veh = cot.vista_cliente?.vehiculo_manual || {}
-              const cli = cot.vista_cliente?.cliente_manual || {}
-              const titulo = cot.vista_cliente?.titulo || `COT-${cot.numero_cotizacion}`
-              const asignando = asignandoPresupuesto === cot.id
-              return (
-                <button
-                  key={cot.id}
-                  type="button"
-                  onClick={() => onAsignarPresupuesto?.(cot.id)}
-                  disabled={asignando || !!presupuestoSeleccionadoId}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    background: 'var(--card)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 10,
-                    padding: 12,
-                    cursor: asignando || presupuestoSeleccionadoId ? 'default' : 'pointer',
-                    fontFamily: 'inherit',
-                    opacity: asignando || presupuestoSeleccionadoId ? 0.65 : 1,
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ margin: '0 0 2px', color: 'var(--foreground)', fontSize: 14, fontWeight: 700 }}>
-                        {titulo}
-                      </p>
-                      <p style={{ margin: 0, color: 'var(--muted-foreground)', fontSize: 12 }}>
-                        COT-{cot.numero_cotizacion}
-                        {veh.patente ? ` \u00b7 ${veh.patente}` : ''}
-                        {veh.marca || veh.modelo ? ` \u00b7 ${[veh.marca, veh.modelo].filter(Boolean).join(' ')}` : ''}
-                        {cli.nombre ? ` \u00b7 ${cli.nombre}` : ''}
-                      </p>
-                    </div>
-                    <span style={{ color: 'var(--secco-gold)', fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
-                      {asignando ? 'Asignando...' : 'Asignar'}
-                    </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <input
+              type="text"
+              className="s-input"
+              value={filtroPresupuesto}
+              onChange={(e) => setFiltroPresupuesto(e.target.value)}
+              placeholder="Buscar por patente, N\u00b0 o cliente"
+            />
+
+            {!coincidentes.length && !resto.length ? (
+              <p style={{ color: 'var(--muted-foreground)', fontSize: 13, margin: 0 }}>
+                {filtro ? `Sin coincidencias para \u00ab${filtroPresupuesto.trim()}\u00bb.` : 'No hay presupuestos sin asignar disponibles.'}
+              </p>
+            ) : (
+              <>
+                {coincidentes.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <p style={{ color: 'var(--secco-gold)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0 }}>
+                      Recomendada para esta patente
+                    </p>
+                    {coincidentes.map((cot) => renderCotizacion(cot, true))}
                   </div>
-                </button>
-              )
-            })}
+                )}
+                {resto.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {coincidentes.length > 0 && (
+                      <p style={{ color: 'var(--muted-foreground)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', margin: 0 }}>
+                        Otros presupuestos
+                      </p>
+                    )}
+                    {resto.map((cot) => renderCotizacion(cot, false))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
