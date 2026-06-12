@@ -1173,10 +1173,16 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
           {status === 'sin_asignar' ? 'Sin asignar' : statusText(status)}
         </span>
         {!isWide && (
-          <button type="button" onClick={() => setShowDiag((v) => !v)}
-            style={{ background: showDiag ? 'var(--secco-gold-10)' : 'var(--card)', border: '1px solid var(--border)', color: showDiag ? 'var(--secco-gold)' : 'var(--muted-foreground)', borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
-            {showDiag ? 'Presupuesto' : 'Diagnóstico'}
-          </button>
+          <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
+            <button type="button" onClick={() => setShowDiag(false)}
+              style={{ background: !showDiag ? 'var(--secco-gold-10)' : 'var(--card)', border: 'none', color: !showDiag ? 'var(--secco-gold)' : 'var(--muted-foreground)', padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Presupuesto
+            </button>
+            <button type="button" onClick={() => setShowDiag(true)}
+              style={{ background: showDiag ? 'var(--secco-gold-10)' : 'var(--card)', border: 'none', borderLeft: '1px solid var(--border)', color: showDiag ? 'var(--secco-gold)' : 'var(--muted-foreground)', padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Cliente / Diag.
+            </button>
+          </div>
         )}
       </div>
 
@@ -1680,7 +1686,7 @@ export default function PresupuestoForm({ cotizacionInicial, onVolver, onAbrirOT
         }}>
           <div style={{ padding: '11px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--background)' }}>
             <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--muted-foreground)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-              {cotizacion?.diagnosticos ? 'Diagnóstico' : 'Contexto'}
+              {cotizacion?.diagnosticos ? 'Cliente y diagnóstico' : 'Cliente y contexto'}
             </p>
           </div>
           <div style={{ flex: 1, overflow: 'auto' }}>

@@ -140,7 +140,7 @@ export default function AdminDashboard({ onNavigate }) {
           </div>
         </div>
 
-        <div className="admin-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+        <div className="admin-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
           {[
             {
               title: 'Actas',
@@ -197,21 +197,12 @@ export default function AdminDashboard({ onNavigate }) {
               <p style={{ margin: '6px 0 2px', fontSize: 22, fontWeight: 900, color: kpi.color }}>
                 {loading ? '—' : kpi.value}
               </p>
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--muted-foreground)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--muted-foreground)', lineHeight: 1.3 }}>
                 {loading ? 'Cargando…' : kpi.subtitle}
               </p>
             </div>
           ))}
         </div>
-
-        <style>{`
-          @media (max-width: 920px) {
-            .admin-kpis { grid-template-columns: repeat(2, 1fr); }
-          }
-          @media (max-width: 520px) {
-            .admin-kpis { grid-template-columns: 1fr; }
-          }
-        `}</style>
       </div>
 
       <div className="s-card" style={{ padding: 14 }}>
